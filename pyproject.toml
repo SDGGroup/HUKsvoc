@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "svoc"
+version = "0.1.0"
+description = "Beavertown Single View of Customer"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+
+dynamic = ["dependencies"]
+
+# Questo serve a trovare automaticamente la tua cartella
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["svoc*"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
