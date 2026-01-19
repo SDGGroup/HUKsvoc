@@ -1,15 +1,8 @@
 from pathlib import Path
-
+from svoc.supervised.enums import SupervisedModel
 
 INPUT_FILEPATH = "./data/HUK_bowimi_data.csv"
 BENCHMARK_FILEPATH = "./data/HUK_sap_data.csv"
-
-SUPERVISED_MODEL_PATHS = {
-    'logreg': Path("./models/logreg_model.pkl"),
-    'svm': Path("./models/svm_model.pkl"),
-    'naive-bayes': Path("./models/bayes_model.pkl"),
-}
-
 
 INPUT_COLUMNS = {
     'ID': 'BowimiId',
@@ -24,6 +17,13 @@ BENCHMARK_COLUMNS = {
     'ADDRESS': 'OutletAddress'
 }
 
+SUPERVISED_MODEL_PATHS: dict[SupervisedModel, Path] = {
+    SupervisedModel.LOGREG: Path("./models/logreg_model.pkl"),
+    SupervisedModel.SVM: Path("./models/svm_model.pkl"),
+    SupervisedModel.NAIVE_BAYES: Path("./models/bayes_model.pkl"),
+}
+
+N_MATCHES = 3
 BLOCK_COL = 'POSTCODE'
 
 NOISE_WORDS_OUTLETNAME = ["THE","BAR","PUB", "LTD", "TA"]

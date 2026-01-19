@@ -190,7 +190,11 @@ def prepare_data(df, dict_cols, parse_address = True, rm_address_noise = False, 
     out = out.set_index('ID')
     return out
 
-def split_df(df, split_col, num_groups):
+def split_df(
+        df: pd.DataFrame, 
+        split_col: str, 
+        num_groups: int
+    ):
     df_split = pd.DataFrame({'COUNT': df[[split_col]].value_counts()}).reset_index()
     df_split = df_split.rename(columns={split_col: 'GROUP'})
     groups = [[] for _ in range(num_groups)]

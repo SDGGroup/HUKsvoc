@@ -2,6 +2,6 @@ data/
 !data/.gitkeep
 models/*
 !models/.gitkeep
-venv/
+.venv/
 __pycache__/
 *.egg-info/

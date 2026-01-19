@@ -28,33 +28,7 @@ def check_matches(df_match, filter_label):
     ids_2 = len(df_match['ID_2'].drop_duplicates())
     print(f"Filter {filter_label}: {ids_1} IDs have been matched with {ids_2} IDs from the input dataset.")
 
-# def find_matches(l_filters, features):
-#     l_matches = []
-#     for i, filter in enumerate(l_filters):
-#         # find matches
-#         matches_filter_i = filter_dataframe(features, filter)
-#         if matches_filter_i.empty:
-#             print(f"Filter {i}: Any match found")
-#             continue
-#         else:
-#             matches_filter_i['ID_filter'] = i + 1
-#             matches_filter_i['score'] = norm_score(matches_filter_i, filter.keys())
-#             matches_filter_i = matches_filter_i.loc[matches_filter_i.groupby('ID_1')['score'].idxmax()]
-#             # check matches
-#             check_matches(matches_filter_i, i)
-#             # append matches
-#             l_matches.append(matches_filter_i)
-#             # update features
-#             features = features[
-#                 ~(features['ID_1'].isin(matches_filter_i['ID_1'])) &
-#                 ~(features['ID_2'].isin(matches_filter_i['ID_2']))
-#                 ]
-#     all_matches = pd.concat(l_matches)
-#     all_matches["match_type"] = "auto"
-#     remaining_features = features
-#     return all_matches, remaining_features
-
-def find_matches(l_filters, features, n=3, verbose=True):
+def find_automatic_matches(l_filters, features, n=3, verbose=True):
     l_matches = []
     missing_matches = features[["ID_1"]].drop_duplicates().copy()
     missing_matches['counter'] = n
@@ -133,7 +107,7 @@ def get_automatic_matches(df_benchmark, df_input, block_col, distances_dict, fil
         features = get_features(distances_dict, df_x=df_x_filtered, df_y=df_y_filtered, block_col=block_col)
         l_features.append(features)
 
-        matches_auto, remaining_features = find_matches(filters_dict, features, n=n_matches, verbose=verbose)
+        matches_auto, remaining_features = find_automatic_matches(filters_dict, features, n=n_matches, verbose=verbose)
         l_all_matches_auto.append(matches_auto)
         l_remaining_features.append(remaining_features)
 
@@ -141,3 +115,4 @@ def get_automatic_matches(df_benchmark, df_input, block_col, distances_dict, fil
         print("⚠️ No matches found")
 
     return concat_l(l_all_matches_auto), concat_l(l_features), concat_l(l_remaining_features)
+

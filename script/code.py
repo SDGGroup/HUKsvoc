@@ -3,7 +3,8 @@ import importlib
 # importlib.reload(cons)
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
 from svoc.automatic.match import get_automatic_matches
-from svoc.supervised.match import train_supervised_model, predict_supervised
+from svoc.supervised.match import predict_supervised
+from svoc.rl import get_matches
 import svoc.constants as cons
 import pandas as pd
 import numpy as np
@@ -46,6 +47,18 @@ df_inner = (df_input_clean
                     how='inner', suffixes=('_input', '_benchmark'))
             )
 #----------------------------------------------------------
+
+## Auto + Superv Matching wrapper
+all_matches, features, remaining_features = get_matches(
+    df_input=df_input_clean, 
+    df_benchmark=df_benchmark_clean, 
+    block_col=cons.BLOCK_COL, 
+    distances_dict=cons.DISTANCES, 
+    filters_dict=cons.FILTERS_AUTO,
+    n_groups=15, n_matches=cons.N_MATCHES, verbose=False
+    )
+
+#----------------------------------------------------------
 ## Automatic Matching
 all_matches_auto, features, remaining_features = get_automatic_matches(
     df_input=df_input_clean, 
@@ -69,7 +82,7 @@ all_matches_auto
 
 #--------------------------------------------------------------------------------------------------------
 ## Training Supervised Models
-
+# from svoc.supervised.match import train_supervised_model
 # ## Usando i match automatici
 # training_matches = (
 #     [all_matches_auto["rank"]==1][["ID_1","ID_2"]]
@@ -78,116 +91,75 @@ all_matches_auto
 # )
 # matched_indexes = all_matches_auto["ID_1"].drop_duplicates().tolist()
 
-## Usando i match certi
-training_matches = (
-    df_inner[[cons.BENCHMARK_COLUMNS['ID'], cons.INPUT_COLUMNS['ID']]]
-    .rename(columns={cons.BENCHMARK_COLUMNS['ID']: 'ID_1', cons.INPUT_COLUMNS['ID']: 'ID_2'})
-    .set_index(["ID_1","ID_2"])
-    .index
-)
-matched_indexes = df_inner[cons.BENCHMARK_COLUMNS['ID']].drop_duplicates().tolist()
+# ## Usando i match certi
+# training_matches = (
+#     df_inner[[cons.BENCHMARK_COLUMNS['ID'], cons.INPUT_COLUMNS['ID']]]
+#     .rename(columns={cons.BENCHMARK_COLUMNS['ID']: 'ID_1', cons.INPUT_COLUMNS['ID']: 'ID_2'})
+#     .set_index(["ID_1","ID_2"])
+#     .index
+# )
+# matched_indexes = df_inner[cons.BENCHMARK_COLUMNS['ID']].drop_duplicates().tolist()
 
-training_features = (features[features["ID_1"].isin(matched_indexes)]
-                     .drop(columns=[cons.BLOCK_COL.lower()])
-                     .set_index(["ID_1","ID_2"])
-                     .copy())
+# training_features = (features[features["ID_1"].isin(matched_indexes)]
+#                      .drop(columns=[cons.BLOCK_COL.lower()])
+#                      .set_index(["ID_1","ID_2"])
+#                      .copy())
  
-model_logreg = train_supervised_model(
-    supervised_model='logreg',
-    train_set_matches_index=training_matches,
-    train_set_features=training_features,
-    save=True,
-    pickle_path=cons.SUPERVISED_MODEL_PATHS['logreg']
-)
-model_svm = train_supervised_model(
-    supervised_model='svm',
-    train_set_matches_index=training_matches,
-    train_set_features=training_features,
-    save=True,
-    pickle_path=cons.SUPERVISED_MODEL_PATHS['svm']
-)
-model_bayes = train_supervised_model(
-    supervised_model='naive-bayes',
-    train_set_matches_index=training_matches,
-    train_set_features=training_features,
-    save=True,
-    pickle_path=cons.SUPERVISED_MODEL_PATHS['naive-bayes']
-)
+# model_logreg = train_supervised_model(
+#     supervised_model='logreg',
+#     train_set_matches_index=training_matches,
+#     train_set_features=training_features,
+#     save=True,
+#     pickle_path=cons.SUPERVISED_MODEL_PATHS['logreg']
+# )
+# model_svm = train_supervised_model(
+#     supervised_model='svm',
+#     train_set_matches_index=training_matches,
+#     train_set_features=training_features,
+#     save=True,
+#     pickle_path=cons.SUPERVISED_MODEL_PATHS['svm']
+# )
+# model_bayes = train_supervised_model(
+#     supervised_model='naive-bayes',
+#     train_set_matches_index=training_matches,
+#     train_set_features=training_features,
+#     save=True,
+#     pickle_path=cons.SUPERVISED_MODEL_PATHS['naive-bayes']
+# )
 
 #--------------------------------------------------------------------------------------------------------
 ## Supervised Matching
 
-# test_features = (features[~features["ID_1"].isin(matched_indexes)]
-#                  .drop(columns=["postcode"])
-#                  .set_index(["ID_1","ID_2"])
-#                  .copy())
+from svoc.utils import concat_l
+from svoc.supervised.match import SupervisedModel
 
 test_features = (remaining_features
                  .drop(columns=[cons.BLOCK_COL.lower()])
                  .set_index(["ID_1","ID_2"])
                  .copy())
 
-matches_pred_logreg = predict_supervised(test_features, cons.SUPERVISED_MODEL_PATHS['logreg'])
-matches_pred_svm = predict_supervised(test_features, cons.SUPERVISED_MODEL_PATHS['svm'])
-matches_pred_bayes = predict_supervised(test_features, cons.SUPERVISED_MODEL_PATHS['naive-bayes'])
+all_matches_supervised_l = []
+features_superv = test_features.copy()
 
+for mdl in SupervisedModel:
+    matches_supervised = predict_supervised(features_superv, model=mdl)
+    features_superv = features_superv.loc[~features_superv.index.isin(matches_supervised.index)]
+    all_matches_supervised_l.append(matches_supervised.reset_index())
 
-all_matches_pred = test_features.loc[matches_pred_logreg].copy()
-all_matches_pred["score"] = all_matches_pred.mean(axis=1)
-all_matches_pred["match_type"] = "supervised"
-all_matches_pred = (
-    all_matches_pred
-        .reset_index()
-        .sort_values(by=['ID_1', 'score'], ascending=[True, False])
-        .assign(rank=lambda x: x.groupby('ID_1').cumcount() + 1)
-)
-all_matches_pred=all_matches_pred[all_matches_pred["rank"]<=3]
+all_matches_supervised = (test_features
+                      .reset_index()
+                      .merge(
+                          concat_l(all_matches_supervised_l), 
+                          on=['ID_1','ID_2'], 
+                          how='inner'
+                          ))
 
+all_matches = pd.concat([all_matches_auto, all_matches_supervised], axis=0, ignore_index=True)
 
-# all_matches = pd.concat(
-#     [
-#         auto, 
-#         all_matches_pred
-#     ]
-#     , axis=0, ignore_index=True).sort_values(by=['ID_1', 'ID_2'])
-
-## Quali sono state mathcate dai modelli ma non dai match automatici (e viceversa)?
-
-auto = all_matches_auto[~all_matches_auto["ID_1"].isin(matched_indexes)][["ID_1","ID_2", "rank", "match_type"]]
-pred = all_matches_pred[["ID_1","ID_2", "match_type"]]
-matches_cfr = auto.merge(pred, on=["ID_1","ID_2"], how='outer', suffixes=('_auto','_pred'))
-
-matches_cfr = (
-    matches_cfr
-    .merge(
-            make_upper_str(rename_and_select_cols(df_benchmark, cons.BENCHMARK_COLUMNS)),
-            left_on='ID_1',
-            right_on='ID'
-            )
-    .drop(columns=['ID'])
-    .merge(
-        make_upper_str(rename_and_select_cols(df_input, cons.INPUT_COLUMNS)),
-        left_on='ID_2',
-        right_on='ID', 
-        suffixes=('_benchmark', '_input'))
-    .drop(columns=['ID'])
-    .rename(columns={'ID_1': 'ID_benchmark', 'ID_2': 'ID_input'})
-)
-# matches_cfr.to_excel("./data/cfr_matches.xlsx", index=False)
-(matches_cfr[matches_cfr["match_type_pred"].isna() & (matches_cfr["rank"]==1)][["ID_benchmark","ID_input"]]
- .merge(
-     all_matches_auto,
-     right_on=['ID_1','ID_2'],
-    left_on=['ID_benchmark','ID_input']
- )).to_excel("./data/cfr_matches_3.xlsx", index=False)
-matches_cfr[matches_cfr["match_type_pred"].isna() & (matches_cfr["rank"]==1)].to_excel("./data/cfr_matches.xlsx", index=False)
-
-# (df_inner[[cons.BENCHMARK_COLUMNS['ID'], cons.INPUT_COLUMNS['ID']]]
-#  .rename(columns={cons.BENCHMARK_COLUMNS['ID']: 'ID_1', cons.INPUT_COLUMNS['ID']: 'ID_2'}))
 #--------------------------------------------------------------------------------------------------------
 
 
-df_match_final = (all_matches_auto[['ID_1', 'ID_2', 'ID_filter', 'rank', "score" ,"match_type"]]
+df_match_final = (all_matches[['ID_1', 'ID_2', 'ID_filter', 'rank', "score" ,"match_type", "model"]]
                 .merge(
                      make_upper_str(rename_and_select_cols(df_benchmark, cons.BENCHMARK_COLUMNS)),
                       left_on='ID_1',
@@ -203,7 +175,7 @@ df_match_final = (all_matches_auto[['ID_1', 'ID_2', 'ID_filter', 'rank', "score"
                 .rename(columns={'ID_1': 'ID_benchmark', 'ID_2': 'ID_input'})
                 )
 
-
+df_match_final.to_excel("./data/matches.xlsx", index=False)
 
 # CONTROLLO RISULTATI ---------------------------------------------------------------------------------------------------------
 
