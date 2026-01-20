@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 import openpyxl
 
-
 df_input = pd.read_csv(cons.INPUT_FILEPATH, sep=',', dtype=str)
 df_benchmark = pd.read_csv(cons.BENCHMARK_FILEPATH, sep=',', dtype=str)
 
@@ -158,27 +157,58 @@ all_matches = pd.concat([all_matches_auto, all_matches_supervised], axis=0, igno
 
 #--------------------------------------------------------------------------------------------------------
 
+def prepare_output(
+        all_matches: pd.DataFrame, 
+        df_benchmark: pd.DataFrame, 
+        df_input: pd.DataFrame,
+        benchmark_cols: dict,
+        input_cols: dict,
+        labels: list = ("_benchmark", "_input"),
+        keep_features: bool = False
+    ):
 
-df_match_final = (all_matches[['ID_1', 'ID_2', 'ID_filter', 'rank', "score" ,"match_type", "model"]]
-                .merge(
-                     make_upper_str(rename_and_select_cols(df_benchmark, cons.BENCHMARK_COLUMNS)),
-                      left_on='ID_1',
-                      right_on='ID'
-                      )
-                .drop(columns=['ID'])
-                .merge(
-                    make_upper_str(rename_and_select_cols(df_input, cons.INPUT_COLUMNS)),
-                    left_on='ID_2',
-                    right_on='ID', 
-                    suffixes=('_benchmark', '_input'))
-                .drop(columns=['ID'])
-                .rename(columns={'ID_1': 'ID_benchmark', 'ID_2': 'ID_input'})
-                )
+    df_benchmark = rename_and_select_cols(df_benchmark, benchmark_cols)
+    df_input = rename_and_select_cols(df_input, input_cols)
+    all_matches[['ID_2']] = all_matches[['ID_2']].apply(lambda col: col.str.lower(), axis=1)
+    
+    if not keep_features:
+        all_matches = all_matches[['ID_1', 'ID_2', 'ID_filter', 'rank', "score" ,"match_type", "model"]]
 
-df_match_final.to_excel("./data/matches.xlsx", index=False)
+    df_match_final = (all_matches
+                    .merge(
+                         df_benchmark,
+                         left_on='ID_1',
+                         right_on='ID'
+                          )
+                    .drop(columns=['ID'])
+                    .merge(
+                        df_input,
+                        left_on='ID_2',
+                        right_on='ID', 
+                        suffixes=labels
+                        )
+                    .drop(columns=['ID'])
+                    .rename(columns={'ID_1': benchmark_cols['ID'], 'ID_2': input_cols['ID']})
+                    )
+
+    return df_match_final
+
+df_match_final = prepare_output(
+    all_matches=all_matches,
+    df_benchmark=df_benchmark,
+    df_input=df_input,
+    benchmark_cols=cons.BENCHMARK_COLUMNS,
+    input_cols=cons.INPUT_COLUMNS,
+    # labels=('_sap', '_bowimi'),
+    keep_features=True
+)
+
+# df_match_final.to_excel("./data/match_final.xlsx", index=False)
+# from svoc.utils import save_pickle
+# save_pickle(df_match_final, "./data/match_final.pkl")
 
 # CONTROLLO RISULTATI ---------------------------------------------------------------------------------------------------------
-
+df_match_final=df_match_final.rename(columns={'SapCode': 'ID_benchmark', 'BowimiId': 'ID_input'})
 df_match_final[['OUTLET_NAME_input', 'OUTLET_NAME_benchmark','rank', 'ID_filter']]
 df_match_final[['ADDRESS_input', 'ADDRESS_benchmark','rank', 'ID_filter']]
 
@@ -186,7 +216,7 @@ df_match_final[['ADDRESS_input', 'ADDRESS_benchmark','rank', 'ID_filter']]
 df_match_final["ID_benchmark"].nunique()
 
 ## Check multiple matches
-n_matches = all_matches_auto.groupby('ID_1').size().reset_index(name='num_matches').sort_values(by='num_matches', ascending=False)
+n_matches = all_matches.groupby('ID_1').size().reset_index(name='num_matches').sort_values(by='num_matches', ascending=False)
 multiple_matches = df_match_final[
     df_match_final["ID_benchmark"].isin(
         n_matches[n_matches['num_matches'] > 1]['ID_1']
@@ -199,7 +229,7 @@ multiple_matches[['ADDRESS_benchmark', 'ADDRESS_input','rank']]
 totali=(df_inner
         .rename(columns={cons.BENCHMARK_COLUMNS['ID']: 'ID_benchmark', cons.INPUT_COLUMNS['ID']: 'ID_input'})
         .merge(
-            df_match_final[["ID_benchmark","ID_input","rank"]],
+            make_upper_str(df_match_final[["ID_benchmark","ID_input","rank"]]),
             on = ["ID_benchmark"],
             suffixes=('','_auto'),
             how='outer'
@@ -250,7 +280,7 @@ mfeat.iloc[0]
 
 num = mfeat.select_dtypes(include='number')
 (
-   num[num > 0.1] 
+   num[num > 0.5] 
     .stack()
     .reset_index()
     .rename(columns={'level_0': 'row_id', 'level_1': 'column', 0: 'value'})

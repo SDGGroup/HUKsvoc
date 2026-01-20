@@ -1,8 +1,9 @@
 from pathlib import Path
 from svoc.supervised.enums import SupervisedModel
 
-INPUT_FILEPATH = "./data/HUK_bowimi_data.csv"
-BENCHMARK_FILEPATH = "./data/HUK_sap_data.csv"
+DATA_DIR = Path("./data")
+INPUT_FILEPATH = DATA_DIR / "HUK_bowimi_data.csv"
+BENCHMARK_FILEPATH = DATA_DIR / "HUK_sap_data.csv"
 
 INPUT_COLUMNS = {
     'ID': 'BowimiId',
@@ -17,10 +18,11 @@ BENCHMARK_COLUMNS = {
     'ADDRESS': 'OutletAddress'
 }
 
+MODELS_DIR = Path("./models")
 SUPERVISED_MODEL_PATHS: dict[SupervisedModel, Path] = {
-    SupervisedModel.LOGREG: Path("./models/logreg_model.pkl"),
-    SupervisedModel.SVM: Path("./models/svm_model.pkl"),
-    SupervisedModel.NAIVE_BAYES: Path("./models/bayes_model.pkl"),
+    SupervisedModel.LOGREG: MODELS_DIR / "logreg_model.pkl",
+    SupervisedModel.SVM: MODELS_DIR / "svm_model.pkl",
+    SupervisedModel.NAIVE_BAYES: MODELS_DIR / "bayes_model.pkl",
 }
 
 N_MATCHES = 3
@@ -340,6 +342,10 @@ filter_outletnameclean_jaro_addressclean_cosine = {
     "outlet_name_clean_jarowinkler": 0.65, #0.75
     "address_clean_cosine": 0.65, #0.75
 }
+filter_outletnameclean_jaro_addressclean_jaro = {
+    "outlet_name_clean_jarowinkler": 0.60, #0.75
+    "address_clean_jarowinkler": 0.60, #0.75
+}
 
 ## Univariati
 filter_eq_outletname = {
@@ -371,6 +377,10 @@ filter_addressclean_levenshtein = {
 filter_addressclean_jarowinkler = {
     "address_clean_jarowinkler": 0.80,
     "outlet_name_clean_cosine": 0.30
+}
+filter_addressclean_levenshtein2 = {
+    "address_clean_levenshtein": 0.80,
+    "outlet_name_clean_levenshtein": 0.20
 }
 
 
@@ -454,6 +464,7 @@ FILTERS_AUTO= [
     filter_outletnameclean_jaro_addressclean_levenshtein, # NEW 
     filter_outletnameclean_levenshtein_addressclean_cosine,
     filter_outletnameclean_jaro_addressclean_cosine, # NEW 
+    filter_outletnameclean_jaro_addressclean_jaro,
     filter_eq_outletname,   # NEW
     filter_eq_address,  # NEW
     filter_eq_outletnameclean,  # NEW
@@ -462,7 +473,8 @@ FILTERS_AUTO= [
     filter_addresscleanin2,  # NEW
     filter_addressclean_cosine,  # NEW
     filter_addressclean_levenshtein,    # NEW
-    filter_addressclean_jarowinkler    # NEW
+    filter_addressclean_jarowinkler,    # NEW
+    filter_addressclean_levenshtein2
     # filter_outletnameclean_cosine,   # NEW
     # filter_outletnameclean_levenshtein, # NEW
     # filter_outletnameclean_jarowinkler, # NEW
