@@ -5,3 +5,5 @@ tqdm==4.67.1
 recordlinkage==0.16
 scikit-learn==1.8.0
 xlsxwriter==3.2.9
+pydantic==2.12.5
+pydantic-settings==2.12.0

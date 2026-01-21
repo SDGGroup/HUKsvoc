@@ -88,3 +88,4 @@ wcwidth==0.2.14
 wheel==0.42.0
 xlsxwriter==3.2.9
 zope.interface==6.1
+pydantic-settings==2.12.0
