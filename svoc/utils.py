@@ -1,6 +1,8 @@
 import pickle
 from pathlib import Path
 import pandas as pd
+from svoc.settings import Settings 
+import yaml
 
 def concat_l(l):
     out = pd.concat(
@@ -28,3 +30,10 @@ def save_pickle(obj, pickle_path: Path):
         pickle.dump(obj, f)
     
     return None
+
+def get_settings(config_path: str | None = None):
+    if config_path is None:
+        return Settings()
+    else:
+        with open(config_path) as f:
+            return Settings(**yaml.safe_load(f))

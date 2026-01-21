@@ -1,0 +1,23 @@
+DATA_DIR: "./data"
+
+
+BENCHMARK_DATA_FILENAME: "HUK_sap_data.csv"
+BENCHMARK_COLUMNS:
+  ID: 'SapCode'
+  OUTLET_NAME: 'OutletName'
+  POSTCODE: 'OutletPostcode'
+  ADDRESS: 'OutletAddress'
+
+INPUT_DATA_FILENAME: "HUK_bowimi_data.csv"
+INPUT_COLUMNS:
+  ID: 'BowimiId'
+  OUTLET_NAME: 'OutletName'
+  POSTCODE: 'OutletPostCode'
+  ADDRESS: 'OutletAddress'
+
+# MODELS_DIR: "./models"
+# N_MATCHES: 3
+# BLOCK_COL: POSTCODE
+
+
+

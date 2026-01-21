@@ -1,4 +1,3 @@
-from tabnanny import verbose
 import pandas as pd
 from tqdm import tqdm
 from svoc.datapreparation import split_df

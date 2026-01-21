@@ -81,7 +81,6 @@ tqdm==4.67.1
 traitlets==5.14.3
 Twisted==24.3.0
 twisted-iocpsupport==1.0.4
-typing_extensions==4.10.0
 tzdata==2025.3
 Unidecode==1.4.0
 urllib3==2.0.7

@@ -12,8 +12,13 @@ def rename_and_select_cols(df, dict_cols):
     return df_out
 
 def make_upper_str(df):
-    df_out = df.applymap(lambda x: str(x).upper())
+    df_out = df.copy()
+
+    for col in df_out.select_dtypes(include="object"):
+        df_out[col] = df_out[col].str.upper()
+
     return df_out
+
 
 # def parse_address_components(df):
 

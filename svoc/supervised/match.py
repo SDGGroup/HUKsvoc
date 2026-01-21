@@ -2,8 +2,8 @@ import pandas as pd
 import recordlinkage as rl
 from pathlib import Path
 from svoc.utils import load_pickle, save_pickle, concat_l
-from svoc.constants import SUPERVISED_MODEL_PATHS
 from svoc.supervised.enums import SupervisedModel
+from svoc.settings import Settings
 
 def train_supervised_model(
     supervised_model: SupervisedModel,
@@ -39,7 +39,7 @@ def predict_supervised(
     threshold: float = 0.5,
 ):
 
-    pickle_path = SUPERVISED_MODEL_PATHS[model]
+    pickle_path = Settings().SUPERVISED_MODEL_PATH[model]
 
     if pickle_path is None:
         raise ValueError("pickle_path must be provided")

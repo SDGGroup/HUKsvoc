@@ -1,48 +1,53 @@
 
 import importlib
-# importlib.reload(cons)
+# importlib.reload()
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
 from svoc.automatic.match import get_automatic_matches
 from svoc.supervised.match import predict_supervised
 from svoc.rl import get_matches
-import svoc.constants as cons
 import pandas as pd
 import numpy as np
 import openpyxl
+from svoc.utils import get_settings
+from svoc import constants as cons
 
-df_input = pd.read_csv(cons.INPUT_FILEPATH, sep=',', dtype=str)
-df_benchmark = pd.read_csv(cons.BENCHMARK_FILEPATH, sep=',', dtype=str)
+settings = get_settings("./config/dev.yaml")
+
+df_input = pd.read_csv(settings.INPUT_FILEPATH, sep=',', dtype=str)
+df_benchmark = pd.read_csv(settings.BENCHMARK_FILEPATH, sep=',', dtype=str)
 
 ## Modifico Location SAP
 df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)
 cols_to_join = ["AddressLine1", "AddressLine2", "AddressLine3", "AddressLine4"]
-df_loc[cons.BENCHMARK_COLUMNS['ADDRESS']] = df_loc[cols_to_join].apply(
+df_loc[settings.BENCHMARK_COLUMNS.ADDRESS] = df_loc[cols_to_join].apply(
     lambda x: ', '.join(x.dropna().astype(str)), 
     axis=1
 ) 
-df_benchmark = df_benchmark.drop(columns=[cons.BENCHMARK_COLUMNS['ADDRESS']]).merge(
-    df_loc[["CustomerCode", cons.BENCHMARK_COLUMNS['ADDRESS']]],
-    left_on=cons.BENCHMARK_COLUMNS['ID'], right_on="CustomerCode",
+df_benchmark = df_benchmark.drop(columns=[settings.BENCHMARK_COLUMNS.ADDRESS]).merge(
+    df_loc[["CustomerCode", settings.BENCHMARK_COLUMNS.ADDRESS]],
+    left_on=settings.BENCHMARK_COLUMNS.ID, right_on="CustomerCode",
     how='left'
 ).drop(columns=['CustomerCode'])
 
 #----------------------------------------------------------
 ## Data Preparation
 df_input_clean = prepare_data(
-    df=df_input, dict_cols=cons.INPUT_COLUMNS,
+    df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
     parse_address=True, get_town=False, rm_address_noise=True)
 
-df_benchmark_clean = prepare_data(df=df_benchmark, dict_cols=cons.BENCHMARK_COLUMNS, parse_address=False, rm_address_noise=True)
+df_benchmark_clean = prepare_data(
+    df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT, 
+    parse_address=False, rm_address_noise=True)
 
 df_inner = (df_input_clean
             .merge(
-                make_upper_str(df_input[[cons.INPUT_COLUMNS['ID'], "SapCode"]]).replace(['NAN', 'NONE'], np.nan), 
-                left_on='ID', right_on=cons.INPUT_COLUMNS['ID'], 
+                make_upper_str(df_input[[settings.INPUT_COLUMNS.ID, "SapCode"]]).replace(['NAN', 'NONE'], np.nan), 
+                left_on='ID', right_on=settings.INPUT_COLUMNS.ID, 
                 how='left'
                 )
                 .merge(
                     df_benchmark_clean, 
-                    left_on=cons.BENCHMARK_COLUMNS['ID'], right_on='ID', 
+                    left_on=settings.BENCHMARK_COLUMNS.ID, right_on='ID', 
                     how='inner', suffixes=('_input', '_benchmark'))
             )
 #----------------------------------------------------------
@@ -51,10 +56,10 @@ df_inner = (df_input_clean
 all_matches, features, remaining_features = get_matches(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
-    block_col=cons.BLOCK_COL, 
+    block_col=settings.BLOCK_COL, 
     distances_dict=cons.DISTANCES, 
     filters_dict=cons.FILTERS_AUTO,
-    n_groups=15, n_matches=cons.N_MATCHES, verbose=False
+    n_groups=15, n_matches=settings.N_MATCHES, verbose=False
     )
 
 #----------------------------------------------------------
@@ -62,10 +67,10 @@ all_matches, features, remaining_features = get_matches(
 all_matches_auto, features, remaining_features = get_automatic_matches(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
-    block_col=cons.BLOCK_COL, 
+    block_col=settings.BLOCK_COL, 
     distances_dict=cons.DISTANCES, 
     filters_dict=cons.FILTERS_AUTO,
-    n_groups=15, n_matches=3, verbose=False)
+    n_groups=15, n_matches=settings.N_MATCHES, verbose=False)
 
 all_matches_auto = (
     all_matches_auto
@@ -133,7 +138,7 @@ from svoc.utils import concat_l
 from svoc.supervised.match import SupervisedModel
 
 test_features = (remaining_features
-                 .drop(columns=[cons.BLOCK_COL.lower()])
+                 .drop(columns=[settings.BLOCK_COL.lower()])
                  .set_index(["ID_1","ID_2"])
                  .copy())
 
@@ -197,8 +202,8 @@ df_match_final = prepare_output(
     all_matches=all_matches,
     df_benchmark=df_benchmark,
     df_input=df_input,
-    benchmark_cols=cons.BENCHMARK_COLUMNS,
-    input_cols=cons.INPUT_COLUMNS,
+    benchmark_cols=settings.BENCHMARK_COLUMNS,
+    input_cols=settings.INPUT_COLUMNS,
     # labels=('_sap', '_bowimi'),
     keep_features=True
 )
@@ -227,7 +232,7 @@ multiple_matches[['OUTLET_NAME_benchmark','OUTLET_NAME_input','rank']]
 multiple_matches[['ADDRESS_benchmark', 'ADDRESS_input','rank']]
 
 totali=(df_inner
-        .rename(columns={cons.BENCHMARK_COLUMNS['ID']: 'ID_benchmark', cons.INPUT_COLUMNS['ID']: 'ID_input'})
+        .rename(columns={settings.BENCHMARK_COLUMNS.ID: 'ID_benchmark', settings.INPUT_COLUMNS.ID: 'ID_input'})
         .merge(
             make_upper_str(df_match_final[["ID_benchmark","ID_input","rank"]]),
             on = ["ID_benchmark"],
@@ -381,7 +386,7 @@ num = mfeat.select_dtypes(include='number')
 #------------------------------------------------------------
 # Seleziono per ogni benchmark id il match con overall score più alto
 ## Schifo
-labels = [d["label"] for d in cons.DISTANCES if d["label"] != "postcode"]
+labels = [d["label"] for d in settings.DISTANCES if d["label"] != "postcode"]
 features["overall_score"] = features[labels].max(axis=1)
 best_overall_score = (
     features

@@ -1,32 +1,35 @@
+# 
+
+# DATA_DIR = Path("./data")
+# INPUT_FILEPATH = DATA_DIR / "HUK_bowimi_data.csv"
+# BENCHMARK_FILEPATH = DATA_DIR / "HUK_sap_data.csv"
+
+# INPUT_COLUMNS = {
+#     'ID': 'BowimiId',
+#     'OUTLET_NAME': 'OutletName',
+#     'POSTCODE': 'OutletPostCode',
+#     'ADDRESS': 'OutletAddress'
+# }
+# BENCHMARK_COLUMNS = {
+#     'ID': 'SapCode',
+#     'OUTLET_NAME': 'OutletName',
+#     'POSTCODE': 'OutletPostcode',
+#     'ADDRESS': 'OutletAddress'
+# }
+
+# MODELS_DIR = Path("./models")
+
+# N_MATCHES = 3
+# BLOCK_COL = 'POSTCODE'
+
 from pathlib import Path
 from svoc.supervised.enums import SupervisedModel
 
-DATA_DIR = Path("./data")
-INPUT_FILEPATH = DATA_DIR / "HUK_bowimi_data.csv"
-BENCHMARK_FILEPATH = DATA_DIR / "HUK_sap_data.csv"
-
-INPUT_COLUMNS = {
-    'ID': 'BowimiId',
-    'OUTLET_NAME': 'OutletName',
-    'POSTCODE': 'OutletPostCode',
-    'ADDRESS': 'OutletAddress'
+SUPERVISED_MODELS_FILENAME: dict[SupervisedModel, Path] = {
+    SupervisedModel.LOGREG: "logreg_model.pkl",
+    SupervisedModel.SVM: "svm_model.pkl",
+    SupervisedModel.NAIVE_BAYES: "bayes_model.pkl",
 }
-BENCHMARK_COLUMNS = {
-    'ID': 'SapCode',
-    'OUTLET_NAME': 'OutletName',
-    'POSTCODE': 'OutletPostcode',
-    'ADDRESS': 'OutletAddress'
-}
-
-MODELS_DIR = Path("./models")
-SUPERVISED_MODEL_PATHS: dict[SupervisedModel, Path] = {
-    SupervisedModel.LOGREG: MODELS_DIR / "logreg_model.pkl",
-    SupervisedModel.SVM: MODELS_DIR / "svm_model.pkl",
-    SupervisedModel.NAIVE_BAYES: MODELS_DIR / "bayes_model.pkl",
-}
-
-N_MATCHES = 3
-BLOCK_COL = 'POSTCODE'
 
 NOISE_WORDS_OUTLETNAME = ["THE","BAR","PUB", "LTD", "TA"]
 NOISE_WORDS_ADDRESS = ["OF","ROAD", "RD", "STREET", "ST","AVENUE", "AV", "DRIVE", "DR", "LANE", "LN", "BOULEVARD", "BLVD", "COURT", "CT", "PLACE", "PL", "SQUARE", "SQ", "TERRACE", "TER", "CRESCENT", "CRES", "HIGHWAY", "HWY"]
