@@ -1,0 +1,25 @@
+DATA_DIR: "./data"
+
+
+BENCHMARK_DATA_FILENAME: "HUK_bowimi_data.csv"
+BENCHMARK_COLUMNS:
+  ID: 'BowimiId'
+  OUTLET_NAME: 'OutletName'
+  POSTCODE: 'OutletPostCode'
+  ADDRESS: 'OutletAddress'
+
+INPUT_DATA_FILENAME: "HUK_cga_data.csv"
+INPUT_COLUMNS:
+  ID: 'CgaId'
+  OUTLET_NAME: 'OutletName'
+  POSTCODE: 'Postcode'
+  ADDRESS: 'OutletAddress'
+
+
+
+MODELS_DIR: "./models"
+
+
+
+
+

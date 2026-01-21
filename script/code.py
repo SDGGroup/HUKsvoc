@@ -11,45 +11,54 @@ import openpyxl
 from svoc.utils import get_settings
 from svoc import constants as cons
 
-settings = get_settings("./config/dev.yaml")
+settings = get_settings("./config/dev2.yaml")
 
 df_input = pd.read_csv(settings.INPUT_FILEPATH, sep=',', dtype=str)
 df_benchmark = pd.read_csv(settings.BENCHMARK_FILEPATH, sep=',', dtype=str)
 
-## Modifico Location SAP
-df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)
-cols_to_join = ["AddressLine1", "AddressLine2", "AddressLine3", "AddressLine4"]
-df_loc[settings.BENCHMARK_COLUMNS.ADDRESS] = df_loc[cols_to_join].apply(
-    lambda x: ', '.join(x.dropna().astype(str)), 
-    axis=1
-) 
-df_benchmark = df_benchmark.drop(columns=[settings.BENCHMARK_COLUMNS.ADDRESS]).merge(
-    df_loc[["CustomerCode", settings.BENCHMARK_COLUMNS.ADDRESS]],
-    left_on=settings.BENCHMARK_COLUMNS.ID, right_on="CustomerCode",
-    how='left'
-).drop(columns=['CustomerCode'])
+# ## Modifico Location SAP
+# df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)
+# cols_to_join = ["AddressLine1", "AddressLine2", "AddressLine3", "AddressLine4"]
+# df_loc[settings.BENCHMARK_COLUMNS.ADDRESS] = df_loc[cols_to_join].apply(
+#     lambda x: ', '.join(x.dropna().astype(str)), 
+#     axis=1
+# ) 
+# df_benchmark = df_benchmark.drop(columns=[settings.BENCHMARK_COLUMNS.ADDRESS]).merge(
+#     df_loc[["CustomerCode", settings.BENCHMARK_COLUMNS.ADDRESS]],
+#     left_on=settings.BENCHMARK_COLUMNS.ID, right_on="CustomerCode",
+#     how='left'
+# ).drop(columns=['CustomerCode'])
 
 #----------------------------------------------------------
 ## Data Preparation
+
+# ## SAP Benchmark - BOWIMI Input(dev.yaml)
+# df_benchmark_clean = prepare_data(
+#     df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT, 
+#     parse_address=False, get_town=False, rm_address_noise=True)
+# df_input_clean = prepare_data(
+#     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
+#     parse_address=True, get_town=False, rm_address_noise=True)
+
+## BOWIMI Benchmark - CGA Input (dev2.yaml)
+df_benchmark_clean = prepare_data(
+    df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT,
+    parse_address=True, get_town=False, rm_address_noise=True)
 df_input_clean = prepare_data(
     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
-    parse_address=True, get_town=False, rm_address_noise=True)
+    parse_address=False, get_town=False, rm_address_noise=True)
 
-df_benchmark_clean = prepare_data(
-    df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT, 
-    parse_address=False, rm_address_noise=True)
-
-df_inner = (df_input_clean
-            .merge(
-                make_upper_str(df_input[[settings.INPUT_COLUMNS.ID, "SapCode"]]).replace(['NAN', 'NONE'], np.nan), 
-                left_on='ID', right_on=settings.INPUT_COLUMNS.ID, 
-                how='left'
-                )
-                .merge(
-                    df_benchmark_clean, 
-                    left_on=settings.BENCHMARK_COLUMNS.ID, right_on='ID', 
-                    how='inner', suffixes=('_input', '_benchmark'))
-            )
+# df_inner = (df_input_clean
+#             .merge(
+#                 make_upper_str(df_input[[settings.INPUT_COLUMNS.ID, "SapCode"]]).replace(['NAN', 'NONE'], np.nan), 
+#                 left_on='ID', right_on=settings.INPUT_COLUMNS.ID, 
+#                 how='left'
+#                 )
+#                 .merge(
+#                     df_benchmark_clean, 
+#                     left_on=settings.BENCHMARK_COLUMNS.ID, right_on='ID', 
+#                     how='inner', suffixes=('_input', '_benchmark'))
+#             )
 #----------------------------------------------------------
 
 ## Auto + Superv Matching wrapper
@@ -174,6 +183,7 @@ def prepare_output(
 
     df_benchmark = rename_and_select_cols(df_benchmark, benchmark_cols)
     df_input = rename_and_select_cols(df_input, input_cols)
+    all_matches[['ID_1']] = all_matches[['ID_1']].apply(lambda col: col.str.lower(), axis=1)
     all_matches[['ID_2']] = all_matches[['ID_2']].apply(lambda col: col.str.lower(), axis=1)
     
     if not keep_features:
@@ -202,18 +212,21 @@ df_match_final = prepare_output(
     all_matches=all_matches,
     df_benchmark=df_benchmark,
     df_input=df_input,
-    benchmark_cols=settings.BENCHMARK_COLUMNS,
-    input_cols=settings.INPUT_COLUMNS,
+    benchmark_cols=settings.BENCHMARK_COLUMNS_DICT,
+    input_cols=settings.INPUT_COLUMNS_DICT,
     # labels=('_sap', '_bowimi'),
     keep_features=True
 )
 
-# df_match_final.to_excel("./data/match_final.xlsx", index=False)
+# df_match_final.to_excel("./data/match_final2.xlsx", index=False)
 # from svoc.utils import save_pickle
 # save_pickle(df_match_final, "./data/match_final.pkl")
 
 # CONTROLLO RISULTATI ---------------------------------------------------------------------------------------------------------
-df_match_final=df_match_final.rename(columns={'SapCode': 'ID_benchmark', 'BowimiId': 'ID_input'})
+
+# df_match_final=df_match_final.rename(columns={'SapCode': 'ID_benchmark', 'BowimiId': 'ID_input'})
+df_match_final=df_match_final.rename(columns={'BowimiId': 'ID_benchmark', 'CgaId': 'ID_input'})
+
 df_match_final[['OUTLET_NAME_input', 'OUTLET_NAME_benchmark','rank', 'ID_filter']]
 df_match_final[['ADDRESS_input', 'ADDRESS_benchmark','rank', 'ID_filter']]
 
@@ -231,6 +244,8 @@ multiple_matches = df_match_final[
 multiple_matches[['OUTLET_NAME_benchmark','OUTLET_NAME_input','rank']]
 multiple_matches[['ADDRESS_benchmark', 'ADDRESS_input','rank']]
 
+
+## Controllo vs. match certi
 totali=(df_inner
         .rename(columns={settings.BENCHMARK_COLUMNS.ID: 'ID_benchmark', settings.INPUT_COLUMNS.ID: 'ID_input'})
         .merge(

@@ -171,7 +171,7 @@ def clean_address_noise_words(df, col, name=None):
     out[name] = out[col].apply(process_row)
     return out
 
-def prepare_data(df, dict_cols, parse_address = True, rm_address_noise = False, get_town = True):
+def prepare_data(df, dict_cols, parse_address = True, rm_address_noise = False, get_town = False):
     out=rename_and_select_cols(df=df, dict_cols=dict_cols)
     out=make_upper_str(df=out)
 
