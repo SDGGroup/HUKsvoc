@@ -1,26 +1,3 @@
-# 
-
-# DATA_DIR = Path("./data")
-# INPUT_FILEPATH = DATA_DIR / "HUK_bowimi_data.csv"
-# BENCHMARK_FILEPATH = DATA_DIR / "HUK_sap_data.csv"
-
-# INPUT_COLUMNS = {
-#     'ID': 'BowimiId',
-#     'OUTLET_NAME': 'OutletName',
-#     'POSTCODE': 'OutletPostCode',
-#     'ADDRESS': 'OutletAddress'
-# }
-# BENCHMARK_COLUMNS = {
-#     'ID': 'SapCode',
-#     'OUTLET_NAME': 'OutletName',
-#     'POSTCODE': 'OutletPostcode',
-#     'ADDRESS': 'OutletAddress'
-# }
-
-# MODELS_DIR = Path("./models")
-
-# N_MATCHES = 3
-# BLOCK_COL = 'POSTCODE'
 
 from pathlib import Path
 from svoc.supervised.enums import SupervisedModel

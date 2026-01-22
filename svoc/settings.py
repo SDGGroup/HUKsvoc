@@ -7,21 +7,25 @@ from svoc.supervised.enums import SupervisedModel
 
 class DataColumns(BaseModel):
     ID: str = "ID"
-    OUTLET_NAME: str = "OutletName"
-    ADDRESS: str = "OutletAddress"
-    POSTCODE: str = "OutletPostcode"
+    OUTLET_NAME: str = "OUTLET_NAME"
+    ADDRESS: str = "ADDRESS"
+    POSTCODE: str = "POSTCODE"
 
 class Settings(BaseSettings):
 
     DATA_DIR: Path = Path(".")
-    INPUT_DATA_FILENAME: str = "HUK_bowimi_data.csv"
-    BENCHMARK_DATA_FILENAME: str = "HUK_sap_data.csv"
+    INPUT_DATA_FILENAME: str =  ""
+    BENCHMARK_DATA_FILENAME: str =  ""
     @property
     def INPUT_FILEPATH(self) -> Path:
         return self.DATA_DIR / self.INPUT_DATA_FILENAME
     @property
     def BENCHMARK_FILEPATH(self) -> Path:
         return self.DATA_DIR / self.BENCHMARK_DATA_FILENAME
+
+    INPUT_DATATABLE: str =  ""
+    BENCHMARK_DATATABLE: str = ""
+
 
     INPUT_COLUMNS: DataColumns = Field(default_factory=DataColumns)
     BENCHMARK_COLUMNS: DataColumns = Field(default_factory=DataColumns)
@@ -61,3 +65,12 @@ class Settings(BaseSettings):
             )
 
         return values
+
+import yaml
+
+def get_settings(config_path: str | None = None):
+    if config_path is None:
+        return Settings()
+    else:
+        with open(config_path) as f:
+            return Settings(**yaml.safe_load(f))

@@ -1,6 +1,8 @@
 
 import importlib
 # importlib.reload()
+from svoc.settings import get_settings
+from svoc.utils import read_data
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
 from svoc.automatic.match import get_automatic_matches
 from svoc.supervised.match import predict_supervised
@@ -8,13 +10,14 @@ from svoc.rl import get_matches
 import pandas as pd
 import numpy as np
 import openpyxl
-from svoc.utils import get_settings
+
 from svoc import constants as cons
 
+
+# settings = get_settings()
 settings = get_settings("./config/dev2.yaml")
 
-df_input = pd.read_csv(settings.INPUT_FILEPATH, sep=',', dtype=str)
-df_benchmark = pd.read_csv(settings.BENCHMARK_FILEPATH, sep=',', dtype=str)
+df_input, df_benchmark = read_data(settings)
 
 # ## Modifico Location SAP
 # df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)
