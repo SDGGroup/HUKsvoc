@@ -1,6 +1,7 @@
 
 from pathlib import Path
 from svoc.supervised.enums import SupervisedModel
+from svoc.automatic.enums import Distance, DistanceMethod
 
 SUPERVISED_MODELS_FILENAME: dict[SupervisedModel, Path] = {
     SupervisedModel.LOGREG: "logreg_model.pkl",
@@ -30,108 +31,42 @@ NOISE_WORDS_ADDRESS_REPLACE = {
             r'\bHWY\b': 'HIGHWAY'
         }
 
-DISTANCES = [
-    {
-    'col_name': 'OUTLET_NAME',
-    'method': 'cosine',
-    'label': 'outlet_name_cosine'
-    },
-    {
-    'col_name': 'OUTLET_NAME',
-    'method': 'jarowinkler',
-    'label': 'outlet_name_jarowinkler'
-    },
-    {
-    'col_name': 'OUTLET_NAME',
-    'method': 'levenshtein',
-    'label': 'outlet_name_levenshtein'
-    },
-    {
-    'col_name': 'OUTLET_NAME',
-    'method': 'qgram',
-    'label': 'outlet_name_qgram'
-    },
-    {
-    'col_name': 'OUTLET_NAME_CLEAN',
-    'method': 'cosine',
-    'label': 'outlet_name_clean_cosine'
-    },
-    {
-    'col_name': 'OUTLET_NAME_CLEAN',
-    'method': 'jarowinkler',
-    'label': 'outlet_name_clean_jarowinkler'
-    },
-    {
-    'col_name': 'OUTLET_NAME_CLEAN',
-    'method': 'levenshtein',
-    'label': 'outlet_name_clean_levenshtein'
-    },
-    {
-    'col_name': 'OUTLET_NAME_CLEAN',
-    'method': 'qgram',
-    'label': 'outlet_name_clean_qgram'
-    },
-    {
-    'col_name': 'ADDRESS',
-    'method': 'cosine',
-    'label': 'address_cosine'
-    },
-    {
-    'col_name': 'ADDRESS',
-    'method': 'jarowinkler',
-    'label': 'address_jarowinkler'
-    },
-    {
-    'col_name': 'ADDRESS',
-    'method': 'levenshtein',
-    'label': 'address_levenshtein'
-    },
-    {
-    'col_name': 'ADDRESS',
-    'method': 'qgram',
-    'label': 'address_qgram'
-    },
-    {
-    'col_name': 'ADDRESS_CLEAN',
-    'method': 'cosine',
-    'label': 'address_clean_cosine'
-    },
-    {
-    'col_name': 'ADDRESS_CLEAN',
-    'method': 'jarowinkler',
-    'label': 'address_clean_jarowinkler'
-    },
-    {
-    'col_name': 'ADDRESS_CLEAN',
-    'method': 'levenshtein',
-    'label': 'address_clean_levenshtein'
-    },
-    {
-    'col_name': 'ADDRESS_CLEAN',
-    'method': 'qgram',
-    'label': 'address_clean_qgram'
-    },
-    {
-    'col_name': 'OUTLET_NAME',
-    'label': 'outlet_name'
-    },
-    {
-    'col_name': 'ADDRESS',
-    'label': 'address'
-    },
-    {
-    'col_name': 'OUTLET_NAME_CLEAN',
-    'label': 'outlet_name_clean'
-    },
-    {
-    'col_name': 'ADDRESS_CLEAN',
-    'label': 'address_clean'
-    },
-    {
-    'col_name': 'POSTCODE',
-    'label': 'postcode'
-    }
+DEFAULT_DISTANCES: list[Distance] = [
+    Distance('OUTLET_NAME', DistanceMethod.COSINE, 'outlet_name_cosine'),
+    Distance('ADDRESS', DistanceMethod.COSINE, 'address_cosine'),
 ]
+
+DISTANCES: list[Distance] = DEFAULT_DISTANCES + [
+    Distance('OUTLET_NAME', DistanceMethod.JAROWINKLER, 'outlet_name_jarowinkler'),
+    Distance('OUTLET_NAME', DistanceMethod.LEVENSHTEIN, 'outlet_name_levenshtein'),
+    Distance('OUTLET_NAME', DistanceMethod.QGRAM, 'outlet_name_qgram'),
+    Distance('OUTLET_NAME_CLEAN', DistanceMethod.COSINE, 'outlet_name_clean_cosine'),
+    Distance('OUTLET_NAME_CLEAN', DistanceMethod.JAROWINKLER, 'outlet_name_clean_jarowinkler'),
+    Distance('OUTLET_NAME_CLEAN', DistanceMethod.LEVENSHTEIN, 'outlet_name_clean_levenshtein'),
+    Distance('OUTLET_NAME_CLEAN', DistanceMethod.QGRAM, 'outlet_name_clean_qgram'),
+    Distance('ADDRESS', DistanceMethod.JAROWINKLER, 'address_jarowinkler'),
+    Distance('ADDRESS', DistanceMethod.LEVENSHTEIN, 'address_levenshtein'),
+    Distance('ADDRESS', DistanceMethod.QGRAM, 'address_qgram'),
+    Distance('ADDRESS_CLEAN', DistanceMethod.COSINE, 'address_clean_cosine'),
+    Distance('ADDRESS_CLEAN', DistanceMethod.JAROWINKLER, 'address_clean_jarowinkler'),
+    Distance('ADDRESS_CLEAN', DistanceMethod.LEVENSHTEIN, 'address_clean_levenshtein'),
+    Distance('ADDRESS_CLEAN', DistanceMethod.QGRAM, 'address_clean_qgram'),
+    Distance('OUTLET_NAME', DistanceMethod.EXACT, 'outlet_name'),
+    Distance('OUTLET_NAME_CLEAN', DistanceMethod.EXACT, 'outlet_name_clean'),
+    Distance('ADDRESS', DistanceMethod.EXACT, 'address'),
+    Distance('ADDRESS_CLEAN', DistanceMethod.EXACT, 'address_clean'),
+    Distance('POSTCODE', DistanceMethod.EXACT, 'postcode'),
+    Distance('OUTLET_NAME', DistanceMethod.SUBSTRING, 'outlet_name_in'),
+    Distance('OUTLET_NAME_CLEAN', DistanceMethod.SUBSTRING, 'outlet_name_clean_in'),
+    Distance('ADDRESS', DistanceMethod.SUBSTRING, 'address_in'),
+    Distance('ADDRESS_CLEAN', DistanceMethod.SUBSTRING, 'address_clean_in'),
+    Distance('OUTLET_NAME', DistanceMethod.WORDSMATCH, 'outlet_name_in2'),
+    Distance('OUTLET_NAME_CLEAN', DistanceMethod.WORDSMATCH, 'outlet_name_clean_in2'),
+    Distance('ADDRESS', DistanceMethod.WORDSMATCH, 'address_in2'),
+    Distance('ADDRESS_CLEAN', DistanceMethod.WORDSMATCH, 'address_clean_in2'),
+]
+
+
 
 ## Identici
 filter_eq_outletname_eq_address = {
@@ -329,21 +264,27 @@ filter_outletnameclean_jaro_addressclean_jaro = {
 
 ## Univariati
 filter_eq_outletname = {
-    "outlet_name": 0.5
+    "outlet_name": 0.5,
+    "address_cosine": 0
 }
 filter_eq_address = {
+    "outlet_name_cosine": 0,
     "address": 0.5
 }
 filter_eq_outletnameclean = {
-    "outlet_name_clean": 0.5
+    "outlet_name_clean": 0.5,
+    "address_cosine": 0
 }
 filter_eq_addressclean = {
+    "outlet_name_cosine": 0,
     "address_clean": 0.5
 }
 filter_outletnamecleanin2 = {
-    "outlet_name_clean_in2": 0.5
+    "outlet_name_clean_in2": 0.5,
+    "address_cosine": 0
 }
 filter_addresscleanin2 = {
+    "outlet_name_cosine": 0,
     "address_clean_in2": 0.5
 }
 filter_addressclean_cosine = {
@@ -379,7 +320,7 @@ filter_outletnameclean_jarowinkler = {
 filter_addressclean_cosine2 = {
     "address_clean_cosine": 0.70
 }
-filter_addressclean_levenshtein2 = {
+filter_addressclean_levenshtein3 = {
     "address_clean_levenshtein": 0.80
 }
 filter_addressclean_jarowinkler2 = {

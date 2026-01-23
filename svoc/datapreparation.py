@@ -107,10 +107,28 @@ def parse_address_components(df, get_town=True):
     
     return out.drop(columns=['processAdd'])
 
-def remove_accents_and_regex(df, re_pattern, l_id_cols, l_cols_not_to_apply=[]):
+def remove_accents_and_regex(
+        df: pd.DataFrame, 
+        re_pattern: str, 
+        l_id_cols: list, 
+        l_cols_not_to_apply: list | None = None
+    ) -> pd.DataFrame:
+    
+    if l_cols_not_to_apply is None:
+        l_cols_not_to_apply = []
+
     df_out = df.replace(['NAN', 'nan', 'NONE'], '')
-    df_out[df_out.columns.difference(l_id_cols+l_cols_not_to_apply)] = df_out[df_out.columns.difference(l_id_cols+l_cols_not_to_apply)].applymap(lambda x: unidecode(x) if pd.notna(x) else x)
-    df_out[df_out.columns.difference(l_id_cols+l_cols_not_to_apply)] = df_out[df_out.columns.difference(l_id_cols+l_cols_not_to_apply)].apply(lambda col: col.str.replace(re_pattern, '', regex=True))
+
+    cols_to_clean = df_out.columns.difference(l_id_cols + l_cols_not_to_apply)
+
+    df_out[cols_to_clean] = df_out[cols_to_clean].map(
+        lambda x: unidecode(x) if pd.notna(x) else x
+    )
+
+    df_out[cols_to_clean] = df_out[cols_to_clean].apply(
+        lambda col: col.str.replace(re_pattern, '', regex=True)
+    )
+
     df_out = df_out.replace('', np.nan)
     return df_out
 

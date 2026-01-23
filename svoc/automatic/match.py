@@ -58,6 +58,7 @@ def find_automatic_matches(l_filters, features, n=3, verbose=True):
             # check matches
             if verbose:
                 check_matches(matches_filter_i, i)
+            
             # append matches
             l_matches.append(matches_filter_i)
 

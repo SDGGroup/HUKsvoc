@@ -1,17 +1,14 @@
 
-import importlib
+# import importlib
 # importlib.reload()
 from svoc.settings import get_settings
 from svoc.utils import read_data
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
 from svoc.automatic.match import get_automatic_matches
 from svoc.supervised.match import predict_supervised
-from svoc.rl import get_matches
+from svoc.rl import get_matches, prepare_output
 import pandas as pd
-import numpy as np
-import openpyxl
-
-from svoc import constants as cons
+from svoc.constants import DISTANCES, FILTERS_AUTO
 
 
 # settings = get_settings()
@@ -19,8 +16,9 @@ settings = get_settings("./config/dev2.yaml")
 
 df_input, df_benchmark = read_data(settings)
 
+
 # ## Modifico Location SAP
-# df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)
+# df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)*
 # cols_to_join = ["AddressLine1", "AddressLine2", "AddressLine3", "AddressLine4"]
 # df_loc[settings.BENCHMARK_COLUMNS.ADDRESS] = df_loc[cols_to_join].apply(
 #     lambda x: ', '.join(x.dropna().astype(str)), 
@@ -42,15 +40,6 @@ df_input, df_benchmark = read_data(settings)
 # df_input_clean = prepare_data(
 #     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
 #     parse_address=True, get_town=False, rm_address_noise=True)
-
-## BOWIMI Benchmark - CGA Input (dev2.yaml)
-df_benchmark_clean = prepare_data(
-    df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT,
-    parse_address=True, get_town=False, rm_address_noise=True)
-df_input_clean = prepare_data(
-    df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
-    parse_address=False, get_town=False, rm_address_noise=True)
-
 # df_inner = (df_input_clean
 #             .merge(
 #                 make_upper_str(df_input[[settings.INPUT_COLUMNS.ID, "SapCode"]]).replace(['NAN', 'NONE'], np.nan), 
@@ -62,6 +51,16 @@ df_input_clean = prepare_data(
 #                     left_on=settings.BENCHMARK_COLUMNS.ID, right_on='ID', 
 #                     how='inner', suffixes=('_input', '_benchmark'))
 #             )
+
+## BOWIMI Benchmark - CGA Input (dev2.yaml)
+df_benchmark_clean = prepare_data(
+    df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT,
+    parse_address=True, get_town=False, rm_address_noise=True)
+df_input_clean = prepare_data(
+    df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
+    parse_address=False, get_town=False, rm_address_noise=True)
+
+
 #----------------------------------------------------------
 
 ## Auto + Superv Matching wrapper
@@ -69,10 +68,19 @@ all_matches, features, remaining_features = get_matches(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
     block_col=settings.BLOCK_COL, 
-    distances_dict=cons.DISTANCES, 
-    filters_dict=cons.FILTERS_AUTO,
+    distances_l=DISTANCES, 
+    filters_dict=FILTERS_AUTO,
     n_groups=15, n_matches=settings.N_MATCHES, verbose=False
     )
+
+output = prepare_output(
+    matches=all_matches,
+    distances_l=DISTANCES,
+    filters_dict=FILTERS_AUTO
+)
+
+output[output["ID_filter"]==45]
+output[output["ID_filter"].isna()]
 
 #----------------------------------------------------------
 ## Automatic Matching
@@ -80,8 +88,8 @@ all_matches_auto, features, remaining_features = get_automatic_matches(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
     block_col=settings.BLOCK_COL, 
-    distances_dict=cons.DISTANCES, 
-    filters_dict=cons.FILTERS_AUTO,
+    distances_dict=DISTANCES, 
+    filters_dict=FILTERS_AUTO,
     n_groups=15, n_matches=settings.N_MATCHES, verbose=False)
 
 all_matches_auto = (
@@ -92,7 +100,7 @@ all_matches_auto = (
 
 ## Check filters
 all_matches_auto['ID_filter'].value_counts().sort_index()
-[cons.FILTERS_AUTO[i-1] for i in all_matches_auto['ID_filter'].drop_duplicates().sort_values().tolist()]
+[FILTERS_AUTO[i-1] for i in all_matches_auto['ID_filter'].drop_duplicates().sort_values().tolist()]
 
 all_matches_auto
 
