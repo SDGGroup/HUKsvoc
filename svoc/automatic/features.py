@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 from recordlinkage import Compare, Index
-from svoc.automatic.enums import DistanceMethod, Distance
+from svoc.automatic.enums import DistanceMethod
+from svoc.automatic.models import Distance
 
 def initialize_compare_cl(
         l_compare: list[Distance], 

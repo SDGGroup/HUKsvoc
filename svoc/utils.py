@@ -43,21 +43,23 @@ def read_data(settings: Settings) -> tuple[pd.DataFrame, pd.DataFrame]:
 
         return df_input, df_benchmark
 
-    # # Case 2: load from database tables
-    # if (
-    #     settings.INPUT_DATA_FILENAME == ""
-    #     and settings.BENCHMARK_DATA_FILENAME == ""
-    #     and settings.INPUT_DATATABLE != ""
-    #     and settings.BENCHMARK_DATATABLE != ""
-    # ):
-    #     def import_table(table: str) -> pd.DataFrame:
-    #         df = spark.table(table)
-    #         return df.toPandas()
+    # Case 2: load from database tables
+    if (
+        settings.INPUT_DATA_FILENAME == ""
+        and settings.BENCHMARK_DATA_FILENAME == ""
+        and settings.INPUT_DATATABLE != ""
+        and settings.BENCHMARK_DATATABLE != ""
+    ):
+        from databricks.sdk.runtime import spark
+        
+        def import_table(table: str) -> pd.DataFrame:
+            df = spark.table(table)
+            return df.toPandas()
 
-    #     df_input = import_table(settings.INPUT_DATATABLE)
-    #     df_benchmark = import_table(settings.BENCHMARK_DATATABLE)
+        df_input = import_table(settings.INPUT_DATATABLE)
+        df_benchmark = import_table(settings.BENCHMARK_DATATABLE)
 
-    #     return df_input, df_benchmark
+        return df_input, df_benchmark
 
     # Invalid configuration
     raise ValueError(

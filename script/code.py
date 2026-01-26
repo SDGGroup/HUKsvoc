@@ -8,57 +8,57 @@ from svoc.automatic.match import get_automatic_matches
 from svoc.supervised.match import predict_supervised
 from svoc.rl import get_matches, prepare_output
 import pandas as pd
+import numpy as np
 from svoc.constants import DISTANCES, FILTERS_AUTO
 
 
-# settings = get_settings()
-settings = get_settings("./config/dev2.yaml")
+settings = get_settings()
+# settings = get_settings("./config/dev2.yaml")
 
 df_input, df_benchmark = read_data(settings)
 
-
-# ## Modifico Location SAP
-# df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)*
-# cols_to_join = ["AddressLine1", "AddressLine2", "AddressLine3", "AddressLine4"]
-# df_loc[settings.BENCHMARK_COLUMNS.ADDRESS] = df_loc[cols_to_join].apply(
-#     lambda x: ', '.join(x.dropna().astype(str)), 
-#     axis=1
-# ) 
-# df_benchmark = df_benchmark.drop(columns=[settings.BENCHMARK_COLUMNS.ADDRESS]).merge(
-#     df_loc[["CustomerCode", settings.BENCHMARK_COLUMNS.ADDRESS]],
-#     left_on=settings.BENCHMARK_COLUMNS.ID, right_on="CustomerCode",
-#     how='left'
-# ).drop(columns=['CustomerCode'])
+## Modifico Location SAP
+df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)
+cols_to_join = ["AddressLine1", "AddressLine2", "AddressLine3", "AddressLine4"]
+df_loc[settings.BENCHMARK_COLUMNS.ADDRESS] = df_loc[cols_to_join].apply(
+    lambda x: ', '.join(x.dropna().astype(str)), 
+    axis=1
+) 
+df_benchmark = df_benchmark.drop(columns=[settings.BENCHMARK_COLUMNS.ADDRESS]).merge(
+    df_loc[["CustomerCode", settings.BENCHMARK_COLUMNS.ADDRESS]],
+    left_on=settings.BENCHMARK_COLUMNS.ID, right_on="CustomerCode",
+    how='left'
+).drop(columns=['CustomerCode'])
 
 #----------------------------------------------------------
 ## Data Preparation
 
-# ## SAP Benchmark - BOWIMI Input(dev.yaml)
-# df_benchmark_clean = prepare_data(
-#     df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT, 
-#     parse_address=False, get_town=False, rm_address_noise=True)
-# df_input_clean = prepare_data(
-#     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
-#     parse_address=True, get_town=False, rm_address_noise=True)
-# df_inner = (df_input_clean
-#             .merge(
-#                 make_upper_str(df_input[[settings.INPUT_COLUMNS.ID, "SapCode"]]).replace(['NAN', 'NONE'], np.nan), 
-#                 left_on='ID', right_on=settings.INPUT_COLUMNS.ID, 
-#                 how='left'
-#                 )
-#                 .merge(
-#                     df_benchmark_clean, 
-#                     left_on=settings.BENCHMARK_COLUMNS.ID, right_on='ID', 
-#                     how='inner', suffixes=('_input', '_benchmark'))
-#             )
-
-## BOWIMI Benchmark - CGA Input (dev2.yaml)
+## SAP Benchmark - BOWIMI Input(dev.yaml)
 df_benchmark_clean = prepare_data(
-    df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT,
-    parse_address=True, get_town=False, rm_address_noise=True)
+    df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT, 
+    parse_address=False, get_town=False, rm_address_noise=True)
 df_input_clean = prepare_data(
     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
-    parse_address=False, get_town=False, rm_address_noise=True)
+    parse_address=True, get_town=False, rm_address_noise=True)
+df_inner = (df_input_clean
+            .merge(
+                make_upper_str(df_input[[settings.INPUT_COLUMNS.ID, "SapCode"]]).replace(['NAN', 'NONE'], np.nan), 
+                left_on='ID', right_on=settings.INPUT_COLUMNS.ID, 
+                how='left'
+                )
+                .merge(
+                    df_benchmark_clean, 
+                    left_on=settings.BENCHMARK_COLUMNS.ID, right_on='ID', 
+                    how='inner', suffixes=('_input', '_benchmark'))
+            )
+
+# ## BOWIMI Benchmark - CGA Input (dev2.yaml)
+# df_benchmark_clean = prepare_data(
+#     df=df_benchmark, dict_cols=settings.BENCHMARK_COLUMNS_DICT,
+#     parse_address=True, get_town=False, rm_address_noise=True)
+# df_input_clean = prepare_data(
+#     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
+#     parse_address=False, get_town=False, rm_address_noise=True)
 
 
 #----------------------------------------------------------
@@ -68,19 +68,19 @@ all_matches, features, remaining_features = get_matches(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
     block_col=settings.BLOCK_COL, 
-    distances_l=DISTANCES, 
-    filters_dict=FILTERS_AUTO,
-    n_groups=15, n_matches=settings.N_MATCHES, verbose=False
+    distances=DISTANCES, 
+    filters=FILTERS_AUTO,
+    n_groups=15, n_matches=settings.N_MATCHES, verbose=False,
+    models_path_dict=settings.SUPERVISED_MODEL_PATH
     )
 
 output = prepare_output(
     matches=all_matches,
-    distances_l=DISTANCES,
-    filters_dict=FILTERS_AUTO
+    distances=DISTANCES,
+    filters=FILTERS_AUTO
 )
+output.to_excel("./data/output_1.xlsx", index=False)
 
-output[output["ID_filter"]==45]
-output[output["ID_filter"].isna()]
 
 #----------------------------------------------------------
 ## Automatic Matching
@@ -88,8 +88,8 @@ all_matches_auto, features, remaining_features = get_automatic_matches(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
     block_col=settings.BLOCK_COL, 
-    distances_dict=DISTANCES, 
-    filters_dict=FILTERS_AUTO,
+    distances=DISTANCES, 
+    filters=FILTERS_AUTO,
     n_groups=15, n_matches=settings.N_MATCHES, verbose=False)
 
 all_matches_auto = (
@@ -196,6 +196,8 @@ def prepare_output(
     df_input = rename_and_select_cols(df_input, input_cols)
     all_matches[['ID_1']] = all_matches[['ID_1']].apply(lambda col: col.str.lower(), axis=1)
     all_matches[['ID_2']] = all_matches[['ID_2']].apply(lambda col: col.str.lower(), axis=1)
+    df_input[['ID']] = df_input[['ID']].apply(lambda col: col.str.lower(), axis=1)
+    df_benchmark[['ID']] = df_benchmark[['ID']].apply(lambda col: col.str.lower(), axis=1)
     
     if not keep_features:
         all_matches = all_matches[['ID_1', 'ID_2', 'ID_filter', 'rank', "score" ,"match_type", "model"]]
@@ -220,7 +222,7 @@ def prepare_output(
     return df_match_final
 
 df_match_final = prepare_output(
-    all_matches=all_matches,
+    all_matches=output,
     df_benchmark=df_benchmark,
     df_input=df_input,
     benchmark_cols=settings.BENCHMARK_COLUMNS_DICT,
@@ -229,7 +231,7 @@ df_match_final = prepare_output(
     keep_features=True
 )
 
-# df_match_final.to_excel("./data/match_final2.xlsx", index=False)
+# df_match_final.to_excel("./data/match_final1.xlsx", index=False)
 # from svoc.utils import save_pickle
 # save_pickle(df_match_final, "./data/match_final.pkl")
 

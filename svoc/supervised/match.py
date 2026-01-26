@@ -35,14 +35,12 @@ def train_supervised_model(
 def predict_supervised(
     features: pd.DataFrame,
     model: SupervisedModel,
-   # pickle_path: Path | None = None,
+    pickle_path: Path | None = None,
     threshold: float = 0.5,
 ):
 
-    pickle_path = Settings().SUPERVISED_MODEL_PATH[model]
-
     if pickle_path is None:
-        raise ValueError("pickle_path must be provided")
+        pickle_path = Settings().SUPERVISED_MODEL_PATH[model]
 
     if not 0 <= threshold <= 1:
         raise ValueError("threshold must be between 0 and 1")
@@ -62,7 +60,8 @@ def predict_supervised(
 
 def find_supervised_matches(
     features: pd.DataFrame,
-    block_col: str 
+    block_col: str, 
+    models_path_dict: dict[SupervisedModel, Path] | None = None
 ):
     block_col = block_col.lower()
     if block_col not in features.columns:
@@ -79,8 +78,8 @@ def find_supervised_matches(
 
     for mdl in SupervisedModel:
         if remaining_features.empty:
-            break
-        matches_supervised = predict_supervised(remaining_features, model=mdl)
+            break   
+        matches_supervised = predict_supervised(remaining_features, model=mdl, pickle_path=models_path_dict[mdl])
         remaining_features = remaining_features.loc[~remaining_features.index.isin(matches_supervised.index)]
         all_matches_supervised_l.append(matches_supervised.reset_index())
 

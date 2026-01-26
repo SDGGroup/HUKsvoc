@@ -1,7 +1,10 @@
 
 from pathlib import Path
+from pydantic import BaseModel, field_validator
+from typing import Dict
 from svoc.supervised.enums import SupervisedModel
-from svoc.automatic.enums import Distance, DistanceMethod
+from svoc.automatic.enums import DistanceMethod
+from svoc.automatic.models import Distance
 
 SUPERVISED_MODELS_FILENAME: dict[SupervisedModel, Path] = {
     SupervisedModel.LOGREG: "logreg_model.pkl",
@@ -66,15 +69,41 @@ DISTANCES: list[Distance] = DEFAULT_DISTANCES + [
     Distance('ADDRESS_CLEAN', DistanceMethod.WORDSMATCH, 'address_clean_in2'),
 ]
 
+DISTANCE_LABELS: frozenset[str] = frozenset(
+    d.label for d in DISTANCES
+)
 
+class DistanceFilter(BaseModel):
+    value: Dict[str, float]
 
-## Identici
+    model_config = {
+        "frozen": True
+    }
+
+    @field_validator("value")
+    @classmethod
+    def validate_keys_and_values(cls, v):
+        for k, val in v.items():
+            if k not in DISTANCE_LABELS:
+                raise ValueError(
+                    f"Filter '{k}' not valid. "
+                    f"Allowed values: {sorted(DISTANCE_LABELS)}"
+                )
+
+            if not (0.0 <= val <= 1.0):
+                raise ValueError(
+                    f"Invalid weight for '{k}': {val}. "
+                    "Must be between 0 and 1."
+                )
+        return v
+
+## Identical
 filter_eq_outletname_eq_address = {
     "outlet_name": 0.5,  
     "address": 0.5  
 }
 
-## Outlet name uguale, Address simile
+## Outlet name identical, Address similar
 filter_eq_outletname_address_cosine = {
     "outlet_name": 0.5,
     "address_cosine": 0.70,
@@ -88,7 +117,7 @@ filter_eq_outletname_address_qgram = {
     "address_qgram": 0.5,
 }
 
-## Outlet name uguale, Address CLEAN simile
+## Outlet name identical, Address CLEAN similar
 filter_eq_outletname_addressclean_cosine = {
     "outlet_name": 0.5, 
     "address_clean_cosine": 0.70 # 0.8
@@ -102,7 +131,7 @@ filter_eq_outletname_addressclean_qgram = {
     "address_clean_qgram": 0.65
 }
 
-## Address uguale, Outlet name simile
+## Address identical, Outlet name similar
 filter_eq_address_outletname_cosine = {
     "outlet_name_cosine": 0.70,
     "address": 0.5, 
@@ -116,7 +145,7 @@ filter_eq_address_outletname_qgram = {
     "address": 0.5, 
 }
 
-## Address uguale, Outlet name CLEAN simile
+## Address identical, Outlet name CLEAN similar
 filter_eq_address_outletnameclean_cosine = {
     "outlet_name_clean_cosine": 0.70, #0.8,
     "address": 0.5  
@@ -130,7 +159,7 @@ filter_eq_address_outletnameclean_qgram = {
     "address": 0.5  
 }
 
-## Address uguale, Outlet Name (CLEAN) condiviso
+## Address identical, Outlet Name (CLEAN) shared
 filter_eq_address_eq_outletnamein = {
     "outlet_name_in": 0.50,
     "address": 0.50,
@@ -140,7 +169,7 @@ filter_eq_addressclean_eq_outletnamecleanin = {
     "address_clean": 0.50,
 }
 
-## Outlet Name uguale, Address (CLEAN) condiviso
+## Outlet Name identical, Address (CLEAN) shared
 filter_eq_outletname_eq_addressin = {
     "outlet_name": 0.50,
     "address_in": 0.50, 
@@ -150,7 +179,7 @@ filter_eq_outletnameclean_eq_addresscleanin = {
     "address_clean_in": 0.50,
 }
 
-## Outlet Name condiviso, Address (CLEAN) condiviso
+## Outlet Name shared, Address (CLEAN) shared
 filter_eq_outletnamein_eq_addresscleanin = {
     "outlet_name_in": 0.50,
     "address_clean_in": 0.50,
@@ -160,7 +189,7 @@ filter_eq_outletnamein_eq_addressin = {
     "address_in": 0.50,
 }
 
-## Outlet Name (CLEAN) condiviso, Address (CLEAN) condiviso 2
+## Outlet Name (CLEAN) shared, Address (CLEAN) shared (2)
 filter_eq_outletnamein2_eq_addressin2 = {
     "outlet_name_in2": 0.50,
     "address_in2": 0.50,
@@ -170,7 +199,7 @@ filter_eq_outletnamecleanin2_eq_addresscleanin2 = {
     "address_clean_in2": 0.50,
 }
 
-## Entrambi simili
+## Both similar
 # - CLEAN cosine
 filter_outlet_nameclean_cosine_addressclean_cosine = {
     "outlet_name_clean_cosine": 0.85,
@@ -191,27 +220,27 @@ filter_outlet_nameclean_qgram_addressclean_qgram = {
     "outlet_name_clean_qgram": 0.65,
     "address_clean_qgram": 0.65, 
 }
-# - Originali cosine
+# - Original cosine
 filter_outletname_cosine_address_cosine = {
     "outlet_name_cosine": 0.80,
     "address_cosine": 0.80,
 }
-# - Originali levenshtein
+# - Original levenshtein
 filter_outletname_levenshtein_address_levenshtein = {
     "outlet_name_levenshtein": 0.80,
     "address_levenshtein": 0.80,
 }
-# - Originali jarowinkler
+# - Original jarowinkler
 filter_outletname_jarowinkler_address_jarowinkler = {
     "outlet_name_jarowinkler": 0.80,
     "address_jarowinkler": 0.80,
 }
-# - Originali qgram
+# - Original qgram
 filter_outletname_qgram_address_qgram = {
     "outlet_name_qgram": 0.65,
     "address_qgram": 0.65
 }
-# - Misti CLEAN e Originali
+# - Mixed CLEAN and Original
 filter_outletname_cosine_addressclean_cosine = {
     "outlet_name_cosine": 0.80,
     "address_clean_cosine": 0.80,
@@ -246,23 +275,23 @@ filter_outletnameclean_qgram_address_qgram = {
 }
 
 filter_outletnameclean_jaro_addressclean_levenshtein = {
-    "outlet_name_clean_jarowinkler": 0.65, #0.75
+    "outlet_name_clean_jarowinkler": 0.65,
     "address_clean_levenshtein": 0.65,
 }
 filter_outletnameclean_levenshtein_addressclean_cosine = {
-    "outlet_name_clean_levenshtein": 0.65, #0.75
-    "address_clean_cosine": 0.65, #0.75
+    "outlet_name_clean_levenshtein": 0.65,
+    "address_clean_cosine": 0.65,
 }
 filter_outletnameclean_jaro_addressclean_cosine = {
-    "outlet_name_clean_jarowinkler": 0.65, #0.75
-    "address_clean_cosine": 0.65, #0.75
+    "outlet_name_clean_jarowinkler": 0.65,
+    "address_clean_cosine": 0.65,
 }
 filter_outletnameclean_jaro_addressclean_jaro = {
-    "outlet_name_clean_jarowinkler": 0.60, #0.75
-    "address_clean_jarowinkler": 0.60, #0.75
+    "outlet_name_clean_jarowinkler": 0.60,
+    "address_clean_jarowinkler": 0.60,
 }
 
-## Univariati
+## Univariate
 filter_eq_outletname = {
     "outlet_name": 0.5,
     "address_cosine": 0
@@ -304,102 +333,56 @@ filter_addressclean_levenshtein2 = {
     "outlet_name_clean_levenshtein": 0.20
 }
 
-
-
-
-
-filter_outletnameclean_cosine={
-    "outlet_name_clean_cosine": 0.70,
-}
-filter_outletnameclean_levenshtein = {
-    "outlet_name_clean_levenshtein": 0.80
-}
-filter_outletnameclean_jarowinkler = {
-    "outlet_name_clean_jarowinkler": 0.80
-}
-filter_addressclean_cosine2 = {
-    "address_clean_cosine": 0.70
-}
-filter_addressclean_levenshtein3 = {
-    "address_clean_levenshtein": 0.80
-}
-filter_addressclean_jarowinkler2 = {
-    "address_clean_jarowinkler": 0.80
-}
-## Casi limite
-filter_EX_outletnameclean_jaro_addressclean_levenshtein = {
-    "outlet_name_clean_jarowinkler": 0.30,
-    "address_clean_levenshtein": 0.30,
-}
-filter_EX_addressclean_cosine = {
-    "address_clean_cosine": 0.30
-}
-filter_EX_addressclean_levenshtein = {
-    "address_clean_levenshtein": 0.30
-}
-filter_EX_outletnameclean_cosine = {
-    "outlet_name_clean_cosine": 0.30
-}
-filter_EX_outletnameclean_jarowinkler = {
-    "outlet_name_clean_jarowinkler": 0.30
-}
-#47, 28, 24, 49, 32
 FILTERS_AUTO= [
-    filter_eq_outletname_eq_address,
-    filter_eq_outletname_addressclean_cosine,   
-    filter_eq_outletname_addressclean_levenshtein,
-    filter_eq_outletname_addressclean_qgram,    
-    filter_eq_address_outletnameclean_cosine, 
-    filter_eq_address_outletnameclean_levenshtein,
-    filter_eq_address_outletnameclean_qgram,
-    filter_eq_address_outletname_cosine,
-    filter_eq_address_outletname_levenshtein,
-    filter_eq_address_outletname_qgram,
-    filter_eq_outletname_address_cosine,    
-    filter_eq_outletname_address_levenshtein,
-    filter_eq_outletname_address_qgram, 
-    filter_eq_address_eq_outletnamein,
-    filter_eq_addressclean_eq_outletnamecleanin,
-    filter_eq_outletname_eq_addressin,  
-    filter_eq_outletnameclean_eq_addresscleanin, 
-    filter_eq_outletnamein_eq_addresscleanin,   
-    filter_eq_outletnamein_eq_addressin,
-    filter_eq_outletnamein2_eq_addressin2,          # NEW
-    filter_eq_outletnamecleanin2_eq_addresscleanin2,     # NEW
-    filter_outlet_nameclean_cosine_addressclean_cosine, 
-    filter_outlet_nameclean_levenshtein_addressclean_levenshtein,
-    filter_outlet_nameclean_jarowinkler_addressclean_jarowinkler, # NEW
-    filter_outlet_nameclean_qgram_addressclean_qgram,   
-    filter_outletname_cosine_address_cosine,    
-    filter_outletname_levenshtein_address_levenshtein, 
-    filter_outletname_jarowinkler_address_jarowinkler, # NEW 
-    filter_outletname_qgram_address_qgram,
-    filter_outletname_cosine_addressclean_cosine,   
-    filter_outletname_levenshtein_addressclean_levenshtein,
-    filter_outletname_jarowinkler_addressclean_jarowinkler, # NEW
-    filter_outletname_qgram_addressclean_qgram,
-    filter_outletnameclean_cosine_address_cosine,   
-    filter_outletnameclean_levenshtein_address_levenshtein,
-    filter_outletnameclean_jarowinkler_address_jarowinkler, # NEW
-    filter_outletnameclean_qgram_address_qgram,
-    filter_outletnameclean_jaro_addressclean_levenshtein, # NEW 
-    filter_outletnameclean_levenshtein_addressclean_cosine,
-    filter_outletnameclean_jaro_addressclean_cosine, # NEW 
-    filter_outletnameclean_jaro_addressclean_jaro,
-    filter_eq_outletname,   # NEW
-    filter_eq_address,  # NEW
-    filter_eq_outletnameclean,  # NEW
-    filter_eq_addressclean ,  # NEW
-    filter_outletnamecleanin2,  # NEW
-    filter_addresscleanin2,  # NEW
-    filter_addressclean_cosine,  # NEW
-    filter_addressclean_levenshtein,    # NEW
-    filter_addressclean_jarowinkler,    # NEW
-    filter_addressclean_levenshtein2
-    # filter_outletnameclean_cosine,   # NEW
-    # filter_outletnameclean_levenshtein, # NEW
-    # filter_outletnameclean_jarowinkler, # NEW
-    # filter_addressclean_cosine2,  # NEW
-    # filter_addressclean_levenshtein2,  # NEW
-    # filter_addressclean_jarowinkler2  # NEW
+    DistanceFilter(value=filter_eq_outletname_eq_address),
+    DistanceFilter(value=filter_eq_outletname_addressclean_cosine),   
+    DistanceFilter(value=filter_eq_outletname_addressclean_levenshtein),
+    DistanceFilter(value=filter_eq_outletname_addressclean_qgram),    
+    DistanceFilter(value=filter_eq_address_outletnameclean_cosine), 
+    DistanceFilter(value=filter_eq_address_outletnameclean_levenshtein),
+    DistanceFilter(value=filter_eq_address_outletnameclean_qgram),
+    DistanceFilter(value=filter_eq_address_outletname_cosine),
+    DistanceFilter(value=filter_eq_address_outletname_levenshtein),
+    DistanceFilter(value=filter_eq_address_outletname_qgram),
+    DistanceFilter(value=filter_eq_outletname_address_cosine),    
+    DistanceFilter(value=filter_eq_outletname_address_levenshtein),
+    DistanceFilter(value=filter_eq_outletname_address_qgram), 
+    DistanceFilter(value=filter_eq_address_eq_outletnamein),
+    DistanceFilter(value=filter_eq_addressclean_eq_outletnamecleanin),
+    DistanceFilter(value=filter_eq_outletname_eq_addressin),  
+    DistanceFilter(value=filter_eq_outletnameclean_eq_addresscleanin), 
+    DistanceFilter(value=filter_eq_outletnamein_eq_addresscleanin),   
+    DistanceFilter(value=filter_eq_outletnamein_eq_addressin),
+    DistanceFilter(value=filter_eq_outletnamein2_eq_addressin2),
+    DistanceFilter(value=filter_eq_outletnamecleanin2_eq_addresscleanin2),
+    DistanceFilter(value=filter_outlet_nameclean_cosine_addressclean_cosine), 
+    DistanceFilter(value=filter_outlet_nameclean_levenshtein_addressclean_levenshtein),
+    DistanceFilter(value=filter_outlet_nameclean_jarowinkler_addressclean_jarowinkler),
+    DistanceFilter(value=filter_outlet_nameclean_qgram_addressclean_qgram),   
+    DistanceFilter(value=filter_outletname_cosine_address_cosine),    
+    DistanceFilter(value=filter_outletname_levenshtein_address_levenshtein), 
+    DistanceFilter(value=filter_outletname_jarowinkler_address_jarowinkler),
+    DistanceFilter(value=filter_outletname_qgram_address_qgram),
+    DistanceFilter(value=filter_outletname_cosine_addressclean_cosine),   
+    DistanceFilter(value=filter_outletname_levenshtein_addressclean_levenshtein),
+    DistanceFilter(value=filter_outletname_jarowinkler_addressclean_jarowinkler),
+    DistanceFilter(value=filter_outletname_qgram_addressclean_qgram),
+    DistanceFilter(value=filter_outletnameclean_cosine_address_cosine),   
+    DistanceFilter(value=filter_outletnameclean_levenshtein_address_levenshtein),
+    DistanceFilter(value=filter_outletnameclean_jarowinkler_address_jarowinkler),
+    DistanceFilter(value=filter_outletnameclean_qgram_address_qgram),
+    DistanceFilter(value=filter_outletnameclean_jaro_addressclean_levenshtein),
+    DistanceFilter(value=filter_outletnameclean_levenshtein_addressclean_cosine),
+    DistanceFilter(value=filter_outletnameclean_jaro_addressclean_cosine),
+    DistanceFilter(value=filter_outletnameclean_jaro_addressclean_jaro),
+    DistanceFilter(value=filter_eq_outletname),
+    DistanceFilter(value=filter_eq_address),
+    DistanceFilter(value=filter_eq_outletnameclean),
+    DistanceFilter(value=filter_eq_addressclean),
+    DistanceFilter(value=filter_outletnamecleanin2),
+    DistanceFilter(value=filter_addresscleanin2),
+    DistanceFilter(value=filter_addressclean_cosine),
+    DistanceFilter(value=filter_addressclean_levenshtein),
+    DistanceFilter(value=filter_addressclean_jarowinkler),
+    DistanceFilter(value=filter_addressclean_levenshtein2)
 ]

@@ -3,6 +3,8 @@ from tqdm import tqdm
 from svoc.datapreparation import split_df
 from svoc.utils import concat_l
 from svoc.automatic.features import get_features
+from svoc.automatic.models import Distance
+from svoc.constants import DistanceMethod
 
 def filter_dataframe(df, dict_constraints):
     for column_name, threshold in dict_constraints.items():
@@ -27,11 +29,17 @@ def check_matches(df_match, filter_label):
     ids_2 = len(df_match['ID_2'].drop_duplicates())
     print(f"Filter {filter_label}: {ids_1} IDs have been matched with {ids_2} IDs from the input dataset.")
 
-def find_automatic_matches(l_filters, features, n=3, verbose=True):
+def find_automatic_matches(
+        filters: list[DistanceMethod], 
+        features: pd.DataFrame, 
+        n: int = 3, 
+        verbose: bool = True
+        ) -> tuple[pd.DataFrame, pd.DataFrame]:
     l_matches = []
     missing_matches = features[["ID_1"]].drop_duplicates().copy()
     missing_matches['counter'] = n
-    for i, filter in enumerate(l_filters):
+    for i, f in enumerate(filters):
+        filter = f.value
         # find matches
         matches_filter_i = filter_dataframe(features, filter)
         if matches_filter_i.empty:
@@ -91,7 +99,16 @@ def find_automatic_matches(l_filters, features, n=3, verbose=True):
     remaining_features = features
     return all_matches, remaining_features
 
-def get_automatic_matches(df_benchmark, df_input, block_col, distances_dict, filters_dict, n_groups = 15, n_matches=3, verbose=True):
+def get_automatic_matches(
+        df_benchmark: pd.DataFrame, 
+        df_input: pd.DataFrame, 
+        block_col: str, 
+        distances: list[Distance], 
+        filters: list[DistanceMethod], 
+        n_groups: int = 15, 
+        n_matches: int = 3, 
+        verbose: bool = True
+        ):
     
     results_df = split_df(df=df_benchmark, split_col=block_col, num_groups=n_groups)
     l_all_matches_auto = []
@@ -104,10 +121,10 @@ def get_automatic_matches(df_benchmark, df_input, block_col, distances_dict, fil
         df_y_filtered = df_input[df_input[block_col].isin(group)]#.drop_duplicates()
         df_x_filtered = df_benchmark[df_benchmark[block_col].isin(group)]#.drop_duplicates()
 
-        features = get_features(distances_dict, df_x=df_x_filtered, df_y=df_y_filtered, block_col=block_col)
+        features = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, block_col=block_col)
         l_features.append(features)
 
-        matches_auto, remaining_features = find_automatic_matches(filters_dict, features, n=n_matches, verbose=verbose)
+        matches_auto, remaining_features = find_automatic_matches(filters, features, n=n_matches, verbose=verbose)
         l_all_matches_auto.append(matches_auto)
         l_remaining_features.append(remaining_features)
 

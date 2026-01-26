@@ -3,19 +3,23 @@ from svoc.datapreparation import split_df
 from svoc.utils import concat_l
 from svoc.automatic.features import get_features
 from svoc.automatic.match import find_automatic_matches
-from svoc.automatic.enums import Distance
+from svoc.automatic.models import Distance
+from svoc.supervised.enums import SupervisedModel
 from svoc.supervised.match import find_supervised_matches
 from tqdm import tqdm
+from svoc.constants import DEFAULT_DISTANCES, DistanceMethod
+from pathlib import Path
 
 def get_matches(
         df_benchmark: pd.DataFrame, 
         df_input: pd.DataFrame, 
         block_col: str, 
-        distances_l: list[Distance], 
-        filters_dict: dict, 
+        distances: list[Distance], 
+        filters: list[DistanceMethod], 
         n_groups: int = 15, 
         n_matches: int = 3, 
-        verbose: bool = True
+        verbose: bool = True,
+        models_path_dict: dict[SupervisedModel, Path] | None = None 
         ):
     
     if block_col not in df_benchmark.columns:
@@ -41,9 +45,10 @@ def get_matches(
         df_y_filtered = df_input[df_input[block_col].isin(group)]#.drop_duplicates()
         df_x_filtered = df_benchmark[df_benchmark[block_col].isin(group)]#.drop_duplicates()
 
-        features = get_features(distances_l, df_x=df_x_filtered, df_y=df_y_filtered, block_col=block_col)
-        matches_auto, remaining_features = find_automatic_matches(filters_dict, features, n=n_matches, verbose=verbose)
-        matches_supervised, remaining_features = find_supervised_matches(remaining_features, block_col=block_col)
+        features = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, block_col=block_col)
+        matches_auto, remaining_features = find_automatic_matches(filters, features, n=n_matches, verbose=verbose)
+        matches_supervised, remaining_features = find_supervised_matches(
+            remaining_features, block_col=block_col, models_path_dict=models_path_dict)
         
         l_all_matches.append(matches_auto)
         l_all_matches.append(matches_supervised)
@@ -62,18 +67,19 @@ def get_matches(
 
     return all_matches, concat_l(l_features), concat_l(l_remaining_features)
 
-from svoc.constants import DEFAULT_DISTANCES
-def prepare_output(
+
+def prepare_output( 
         matches: pd.DataFrame,
-        distances_l: list[Distance],
-        filters_dict: list[dict]
+        distances: list[Distance],
+        filters: list[DistanceMethod]
     ):
     
     out = pd.DataFrame()
-    LABEL_TO_COL = {d.label: d.col_name for d in distances_l}
-    LABEL_TO_DIST = {d.label: d.method.value for d in distances_l}
+    LABEL_TO_COL = {d.label: d.col_name for d in distances}
+    LABEL_TO_DIST = {d.label: d.method.value for d in distances}
     to_keep = ['ID_1','ID_2','ID_filter','rank','score','match_type','model']
-    for idx, filter in enumerate(filters_dict):
+    for idx, f in enumerate(filters):
+        filter = f.value
         filter_fields = list(filter.keys())
         aux = matches.loc[
                     matches['ID_filter'] == idx + 1, 
