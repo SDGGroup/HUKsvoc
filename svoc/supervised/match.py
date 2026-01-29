@@ -4,6 +4,9 @@ from pathlib import Path
 from svoc.utils import load_pickle, save_pickle, concat_l
 from svoc.supervised.enums import SupervisedModel
 from svoc.settings import Settings
+from svoc.automatic.models import Distance
+from svoc.datapreparation import prepare_data, make_upper_str
+from svoc.automatic.features import get_features
 
 def train_supervised_model(
     supervised_model: SupervisedModel,
@@ -40,7 +43,7 @@ def predict_supervised(
 ):
 
     if pickle_path is None:
-        pickle_path = Settings().SUPERVISED_MODEL_PATH[model]
+        pickle_path = Settings().SUPERVISED_MODELS_PATHS[model]
 
     if not 0 <= threshold <= 1:
         raise ValueError("threshold must be between 0 and 1")
@@ -60,19 +63,10 @@ def predict_supervised(
 
 def find_supervised_matches(
     features: pd.DataFrame,
-    block_col: str, 
     models_path_dict: dict[SupervisedModel, Path] | None = None
 ):
-    block_col = block_col.lower()
-    if block_col not in features.columns:
-        raise ValueError(
-            f"block_col '{block_col}' not found in df_benchmark columns: "
-            f"{list(features.columns)}"
-        )
-    remaining_features = (features
-                          .drop(columns=block_col)
-                          .set_index(["ID_1","ID_2"])
-                          .copy())
+    
+    remaining_features = features.set_index(["ID_1","ID_2"]).copy()
     
     all_matches_supervised_l = []
 
@@ -96,4 +90,66 @@ def find_supervised_matches(
     remaining_features = remaining_features.reset_index()
 
     return all_matches_supervised, remaining_features
+
+def train_all_models(
+        df_input: pd.DataFrame,
+        input_cols_id_benchmark: str,
+        input_cols: dict,
+        df_benchmark: pd.DataFrame,
+        benchmark_cols: dict,
+        distances: list[Distance], 
+        block_col: str | None = None,
+        window: int = 1,
+        path_models: dict[SupervisedModel, str] | None = None,
+):
+    # Data Preparation
+    df_benchmark_clean = prepare_data(
+    df=df_benchmark, dict_cols=benchmark_cols)
+    df_input_clean = prepare_data(
+        df=df_input, dict_cols=input_cols)
+
+    training_matches = make_upper_str(
+        df_input[~df_input[input_cols_id_benchmark].isna()][[input_cols["ID"], input_cols_id_benchmark]]
+        )    
+    matched_indexes = training_matches[input_cols_id_benchmark].drop_duplicates().tolist()
+    training_matches = (
+        training_matches 
+        .rename(columns={input_cols_id_benchmark: 'ID_1', input_cols["ID"]: 'ID_2'})
+        .set_index(["ID_1","ID_2"])
+        .index
+    )
+
+    training_features = get_features(
+        distances, 
+        df_x=df_benchmark_clean, 
+        df_y=df_input_clean,
+        block_col=block_col, 
+        window=window
+        )
     
+    training_features = (training_features[training_features["ID_1"].isin(matched_indexes)]
+                        .set_index(["ID_1","ID_2"]))
+    
+    models = {}
+    for model in SupervisedModel:
+
+        if path_models is None:
+            mdl = train_supervised_model(
+                supervised_model=model,
+                train_set_matches_index=training_matches,
+                train_set_features=training_features,
+                save=False,
+                pickle_path=None
+            )
+        else:
+            mdl = train_supervised_model(
+                supervised_model=model,
+                train_set_matches_index=training_matches,
+                train_set_features=training_features,
+                save=True,
+                pickle_path=path_models[model]
+            )
+
+        models[model] = mdl
+
+    return models

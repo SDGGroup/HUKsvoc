@@ -4,6 +4,8 @@ from pydantic import BaseModel,Field, model_validator
 from pydantic_settings import  BaseSettings, SettingsConfigDict
 from svoc.constants import SUPERVISED_MODELS_FILENAME
 from svoc.supervised.enums import SupervisedModel
+from typing import Optional
+import warnings
 
 class DataColumns(BaseModel):
     ID: str = "ID"
@@ -38,14 +40,14 @@ class Settings(BaseSettings):
 
     MODELS_DIR: Path = Path("./models")
     @property
-    def SUPERVISED_MODEL_PATH(self) -> dict[SupervisedModel, Path]:
+    def SUPERVISED_MODELS_PATHS(self) -> dict[SupervisedModel, Path]:
         return {
             model: self.MODELS_DIR / filename
             for model, filename in SUPERVISED_MODELS_FILENAME.items()
         }
 
     N_MATCHES: int = Field(3, ge=1)
-    BLOCK_COL: str = "POSTCODE"
+    BLOCK_COL: Optional[str] = "POSTCODE"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -56,11 +58,19 @@ class Settings(BaseSettings):
     
     @model_validator(mode="after")
     def validate_block_col(cls, values):
+        if values.BLOCK_COL is None:
+            warnings.warn(
+                "BLOCK_COL is set to None. Record matching will be performed "
+                "by considering all possible pairs of records.",
+                UserWarning,
+            )
+            return values
+
         allowed_keys = set(DataColumns.model_fields.keys())
 
         if values.BLOCK_COL not in allowed_keys:
             raise ValueError(
-                f"Invalid block_col '{values.BLOCK_COL}'. "
+                f"Invalid BLOCK_COL '{values.BLOCK_COL}'. "
                 f"Allowed values: {sorted(allowed_keys)}"
             )
 

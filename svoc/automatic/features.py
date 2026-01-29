@@ -29,11 +29,17 @@ def rl_compare_block(
         df_1: pd.DataFrame, 
         df_2: pd.DataFrame, 
         compare_cl: Compare, 
-        block_variable: str|None = None
+        block_variable: str|None = None,
+        window: int = 1,
     ) -> pd.DataFrame:
     indexer = Index()
     if block_variable is not None:
-        indexer.block(block_variable)
+        if window > 1:
+            indexer.sortedneighbourhood(block_variable, window=window)
+        else:
+            indexer.block(block_variable)
+    else:
+        indexer.full()
     candidate_links = indexer.index(df_1, df_2)
     features = compare_cl.compute(candidate_links, df_1, df_2)
     features = features.fillna(0.0)
@@ -111,9 +117,10 @@ def get_features(
         distances: list[Distance], 
         df_x: pd.DataFrame, 
         df_y: pd.DataFrame, 
-        block_col: str|None = None
+        block_col: str|None = None,
+        window: int = 1,
     ) -> pd.DataFrame:
     compare_cl = initialize_compare_cl(distances, n_jobs_param=-1)
-    features = rl_compare_block(df_x, df_y, compare_cl, block_col)
+    features = rl_compare_block(df_x, df_y, compare_cl, block_col, window)
     features = manual_features(distances, features, df_x, df_y, index_x="ID_1", index_y="ID_2")
     return features

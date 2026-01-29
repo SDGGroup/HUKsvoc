@@ -58,7 +58,6 @@ DISTANCES: list[Distance] = DEFAULT_DISTANCES + [
     Distance('OUTLET_NAME_CLEAN', DistanceMethod.EXACT, 'outlet_name_clean'),
     Distance('ADDRESS', DistanceMethod.EXACT, 'address'),
     Distance('ADDRESS_CLEAN', DistanceMethod.EXACT, 'address_clean'),
-    Distance('POSTCODE', DistanceMethod.EXACT, 'postcode'),
     Distance('OUTLET_NAME', DistanceMethod.SUBSTRING, 'outlet_name_in'),
     Distance('OUTLET_NAME_CLEAN', DistanceMethod.SUBSTRING, 'outlet_name_clean_in'),
     Distance('ADDRESS', DistanceMethod.SUBSTRING, 'address_in'),
@@ -330,7 +329,7 @@ filter_addressclean_jarowinkler = {
 }
 filter_addressclean_levenshtein2 = {
     "address_clean_levenshtein": 0.80,
-    "outlet_name_clean_levenshtein": 0.20
+    "outlet_name_clean_levenshtein": 0
 }
 
 FILTERS_AUTO= [

@@ -13,42 +13,53 @@ from pathlib import Path
 def get_matches(
         df_benchmark: pd.DataFrame, 
         df_input: pd.DataFrame, 
-        block_col: str, 
         distances: list[Distance], 
         filters: list[DistanceMethod], 
+        block_col: str | None = None, 
         n_groups: int = 15, 
         n_matches: int = 3, 
         verbose: bool = True,
-        models_path_dict: dict[SupervisedModel, Path] | None = None 
+        models_path_dict: dict[SupervisedModel, Path] | None = None,
+        window: int = 1, 
         ):
     
-    if block_col not in df_benchmark.columns:
+    if block_col is not None and block_col not in df_benchmark.columns:
         raise ValueError(
             f"block_col '{block_col}' not found in df_benchmark columns: "
             f"{list(df_benchmark.columns)}"
         )
 
-    if block_col not in df_input.columns:
+    if block_col is not None and block_col not in df_input.columns:
         raise ValueError(
             f"block_col '{block_col}' not found in df_input columns: "
             f"{list(df_input.columns)}"
         )
+    
+    if block_col is None:
+        df_benchmark = df_benchmark.assign(_DUMMY_BLOCK=1)
+        df_input = df_input.assign(_DUMMY_BLOCK=1)
+        block_col = '_DUMMY_BLOCK'
 
     results_df = split_df(df=df_benchmark, split_col=block_col, num_groups=n_groups)
     l_all_matches = []
     l_features = []
     l_remaining_features = []
-    for i, group in enumerate(tqdm(results_df['GROUP'].tolist()[::-1])):
+    for i, group in enumerate(tqdm(results_df['GROUP'].tolist())):#[::-1])):
+        
+        if group == []:
+            continue # skip empty groups
+ 
         if verbose:
             print("\nElaborating group nr.",i + 1)
         
         df_y_filtered = df_input[df_input[block_col].isin(group)]#.drop_duplicates()
         df_x_filtered = df_benchmark[df_benchmark[block_col].isin(group)]#.drop_duplicates()
-
-        features = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, block_col=block_col)
+        features = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, window=window,
+                                block_col=(block_col if block_col != '_DUMMY_BLOCK' else None))
         matches_auto, remaining_features = find_automatic_matches(filters, features, n=n_matches, verbose=verbose)
         matches_supervised, remaining_features = find_supervised_matches(
-            remaining_features, block_col=block_col, models_path_dict=models_path_dict)
+            remaining_features, 
+            models_path_dict=models_path_dict)
         
         l_all_matches.append(matches_auto)
         l_all_matches.append(matches_supervised)
