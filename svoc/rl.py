@@ -9,8 +9,9 @@ from svoc.supervised.match import find_supervised_matches
 from tqdm import tqdm
 from svoc.constants import DEFAULT_DISTANCES, DistanceMethod
 from pathlib import Path
+import json
 
-def get_matches(
+def get_matches_with_blocking(
         df_benchmark: pd.DataFrame, 
         df_input: pd.DataFrame, 
         distances: list[Distance], 
@@ -78,8 +79,7 @@ def get_matches(
 
     return all_matches, concat_l(l_features), concat_l(l_remaining_features)
 
-import json
-def get_matches_new(
+def get_matches_with_clusters(
         df_benchmark: pd.DataFrame, 
         df_input: pd.DataFrame, 
         distances: list[Distance], 

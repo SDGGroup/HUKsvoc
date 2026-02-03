@@ -6,7 +6,7 @@ from svoc.utils import read_data_from_csv
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
 from svoc.automatic.match import get_automatic_matches
 from svoc.supervised.match import predict_supervised
-from svoc.rl import get_matches, prepare_output
+from svoc.rl import get_matches_with_blocking, prepare_output
 import pandas as pd
 import numpy as np
 from svoc.constants import DISTANCES, FILTERS_AUTO
@@ -105,8 +105,8 @@ df_inner = (df_input_clean
 #     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
 #     parse_address=False, get_town=False, rm_address_noise=True)
 
-from svoc.rl import get_matches_new
-all_matches, features, remaining_features = get_matches_new(
+from svoc.rl import get_matches_with_clusters
+all_matches, features, remaining_features = get_matches_with_clusters(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
     block_col=settings.BLOCK_COL, 
@@ -149,7 +149,7 @@ from svoc.supervised.enums import SupervisedModel
 # from pathlib import Path
 
 ## Auto + Superv Matching wrapper
-all_matches_old, features, remaining_features = get_matches(
+all_matches_old, features, remaining_features = get_matches_with_blocking(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
     block_col=settings.BLOCK_COL, 
