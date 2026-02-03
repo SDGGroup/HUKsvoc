@@ -1,5 +1,5 @@
 from svoc.settings import get_settings
-from svoc.utils import read_data
+from svoc.utils import read_data_from_csv
 from svoc.datapreparation import rename_and_select_cols, make_upper_str, remove_accents_and_regex
 import pandas as pd
 import numpy as np
@@ -9,7 +9,7 @@ from sklearn.neighbors import NearestNeighbors
 k = 6
 settings = get_settings()
 
-df_input, df_benchmark = read_data(settings)
+df_input, df_benchmark = read_data_from_csv(settings)
 
 # - Non ci sono coordinane NaN per i dati di input
 # - Ci sono alcune coordinate NaN per i dati di benchmark (poche)

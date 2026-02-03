@@ -2,7 +2,7 @@
 # import importlib
 # importlib.reload()
 from svoc.settings import get_settings
-from svoc.utils import read_data
+from svoc.utils import read_data_from_csv
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
 from svoc.automatic.match import get_automatic_matches
 from svoc.supervised.match import predict_supervised
@@ -15,7 +15,7 @@ from svoc.constants import DISTANCES, FILTERS_AUTO
 settings = get_settings()
 # settings = get_settings("./config/dev2.yaml")
 
-df_input, df_benchmark = read_data(settings)
+df_input, df_benchmark = read_data_from_csv(settings)
 
 # ## Modifico Location SAP (TEST)
 # df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)

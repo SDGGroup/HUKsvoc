@@ -1,6 +1,6 @@
 
 from svoc.settings import get_settings
-from svoc.utils import read_data
+from svoc.utils import read_data_from_csv
 from svoc.supervised.enums import SupervisedModel
 from svoc.supervised.match import train_all_models
 from svoc.constants import DISTANCES
@@ -9,7 +9,7 @@ settings = get_settings()
 # settings = get_settings("./config/dev2.yaml")
 
 # Read Data
-df_input, df_benchmark = read_data(settings)
+df_input, df_benchmark = read_data_from_csv(settings)
 
 # Train Models
 models = train_all_models(

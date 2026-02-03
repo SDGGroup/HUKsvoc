@@ -30,10 +30,8 @@ def save_pickle(obj, pickle_path: Path):
     
     return None
 
+def read_data_from_csv(settings: Settings) -> tuple[pd.DataFrame, pd.DataFrame]:
 
-def read_data(settings: Settings) -> tuple[pd.DataFrame, pd.DataFrame]:
-
-    # Case 1: load from CSV files
     if (
         settings.INPUT_DATA_FILENAME != ""
         and settings.BENCHMARK_DATA_FILENAME != ""
@@ -43,27 +41,31 @@ def read_data(settings: Settings) -> tuple[pd.DataFrame, pd.DataFrame]:
 
         return df_input, df_benchmark
 
-    # # Case 2: load from database tables
-    # if (
-    #     settings.INPUT_DATA_FILENAME == ""
-    #     and settings.BENCHMARK_DATA_FILENAME == ""
-    #     and settings.INPUT_DATATABLE != ""
-    #     and settings.BENCHMARK_DATATABLE != ""
-    # ):
-    #     from databricks.sdk.runtime import spark
-        
-    #     def import_table(table: str) -> pd.DataFrame:
-    #         df = spark.table(table)
-    #         return df.toPandas()
-
-    #     df_input = import_table(settings.INPUT_DATATABLE)
-    #     df_benchmark = import_table(settings.BENCHMARK_DATATABLE)
-
-    #     return df_input, df_benchmark
-
     # Invalid configuration
     raise ValueError(
         "Invalid data source configuration. "
-        "Either both INPUT_DATA_FILENAME and BENCHMARK_DATA_FILENAME must be set, "
-        "or both INPUT_DATATABLE and BENCHMARK_DATATABLE must be set."
+        "Both INPUT_DATA_FILENAME and BENCHMARK_DATA_FILENAME must be set."
     )
+
+# def read_data_from_table(settings: Settings) -> tuple[pd.DataFrame, pd.DataFrame]:
+
+#     if (
+#         settings.INPUT_DATATABLE != ""
+#         and settings.BENCHMARK_DATATABLE != ""
+#     ):
+#         from databricks.sdk.runtime import spark
+        
+#         def import_table(table: str) -> pd.DataFrame:
+#             df = spark.table(table)
+#             return df.toPandas()
+
+#         df_input = import_table(settings.INPUT_DATATABLE)
+#         df_benchmark = import_table(settings.BENCHMARK_DATATABLE)
+
+#         return df_input, df_benchmark
+
+#     # Invalid configuration
+#     raise ValueError(
+#         "Invalid data source configuration. "
+#         "Both INPUT_DATATABLE and BENCHMARK_DATATABLE must be set."
+#     )
