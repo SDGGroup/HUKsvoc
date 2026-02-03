@@ -20,7 +20,7 @@ models = train_all_models(
     benchmark_cols=settings.BENCHMARK_COLUMNS_DICT,
     distances=DISTANCES,
     block_col=settings.BLOCK_COL,
-    window=5,
+    # window=5,
     path_models=settings.SUPERVISED_MODELS_PATHS
 )
 

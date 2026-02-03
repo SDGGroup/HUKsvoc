@@ -3,6 +3,7 @@ import numpy as np
 from recordlinkage import Compare, Index
 from svoc.automatic.enums import DistanceMethod
 from svoc.automatic.models import Distance
+import logging
 
 def initialize_compare_cl(
         l_compare: list[Distance], 
@@ -32,15 +33,20 @@ def rl_compare_block(
         block_variable: str|None = None,
         window: int = 1,
     ) -> pd.DataFrame:
+
     indexer = Index()
+    
     if block_variable is not None:
         if window > 1:
             indexer.sortedneighbourhood(block_variable, window=window)
         else:
             indexer.block(block_variable)
     else:
+        rl_logger = logging.getLogger("recordlinkage")
+        rl_logger.setLevel(logging.ERROR)
         indexer.full()
-    candidate_links = indexer.index(df_1, df_2)
+    
+    candidate_links = indexer.index(df_1, df_2) 
     features = compare_cl.compute(candidate_links, df_1, df_2)
     features = features.fillna(0.0)
     return features
@@ -119,8 +125,9 @@ def get_features(
         df_y: pd.DataFrame, 
         block_col: str|None = None,
         window: int = 1,
+        njobs: int = -1,
     ) -> pd.DataFrame:
-    compare_cl = initialize_compare_cl(distances, n_jobs_param=-1)
+    compare_cl = initialize_compare_cl(distances, n_jobs_param=njobs)
     features = rl_compare_block(df_x, df_y, compare_cl, block_col, window)
     features = manual_features(distances, features, df_x, df_y, index_x="ID_1", index_y="ID_2")
     return features

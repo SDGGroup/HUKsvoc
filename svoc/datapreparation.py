@@ -110,12 +110,14 @@ def parse_address_components(df, get_town=True):
 def remove_accents_and_regex(
         df: pd.DataFrame, 
         re_pattern: str, 
-        l_id_cols: list, 
+        l_id_cols: list | None = None,
         l_cols_not_to_apply: list | None = None
     ) -> pd.DataFrame:
     
     if l_cols_not_to_apply is None:
         l_cols_not_to_apply = []
+    if l_id_cols is None:
+        l_id_cols = []
 
     df_out = df.replace(['NAN', 'nan', 'NONE'], '')
 
