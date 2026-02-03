@@ -1,6 +1,7 @@
 
 # import importlib
 # importlib.reload()
+import json
 from svoc.settings import get_settings
 from svoc.utils import read_data_from_csv
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
@@ -106,12 +107,16 @@ df_inner = (df_input_clean
 #     parse_address=False, get_town=False, rm_address_noise=True)
 
 from svoc.rl import get_matches_with_clusters
+
+with open(".data/postcode.json", "r") as f:
+    groups = json.load(f)
+
 all_matches, features, remaining_features = get_matches_with_clusters(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
-    block_col=settings.BLOCK_COL, 
     distances=DISTANCES, 
     filters=FILTERS_AUTO,
+    groups=groups,
     n_matches=settings.N_MATCHES, verbose=False,
     models_path_dict=settings.SUPERVISED_MODELS_PATHS
     )

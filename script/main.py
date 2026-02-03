@@ -1,41 +1,58 @@
-from svoc.settings import get_settings
-from svoc.utils import read_data_from_csv
-from svoc.datapreparation import prepare_data
-from svoc.rl import get_matches_with_clusters, prepare_output
-from svoc.constants import DISTANCES, FILTERS_AUTO
 
-def main():
-    settings = get_settings()
+from svoc.settings import get_settings, Settings
+from svoc.utils import read_data_from_csv, get_logger
+from svoc.orchestrator import svoc_knn, svoc_record_linkage
+
+logger = get_logger()
+
+def svoc_pipeline(
+        settings: Settings
+    ):
 
     df_input, df_benchmark = read_data_from_csv(settings)
-
-    df_benchmark_clean = prepare_data(
-        df=df_benchmark, 
-        dict_cols=settings.BENCHMARK_COLUMNS_DICT,
-        )
-
-    df_input_clean = prepare_data(
-        df=df_input, 
-        dict_cols=settings.INPUT_COLUMNS_DICT,
-        )
-
-    all_matches, features, remaining_features = get_matches_with_clusters(
-        df_input=df_input_clean, 
-        df_benchmark=df_benchmark_clean, 
-        block_col=settings.BLOCK_COL, 
-        distances=DISTANCES, 
-        filters=FILTERS_AUTO,
-        n_matches=settings.N_MATCHES, verbose=False,
-        models_path_dict=settings.SUPERVISED_MODELS_PATHS
-        )
-
-    output = prepare_output(
-        matches=all_matches,
-        distances=DISTANCES,
-        filters=FILTERS_AUTO
+    
+    logger.info(
+        "Input data loaded: %d input rows, %d benchmark rows",
+        len(df_input),
+        len(df_benchmark)
+    )
+    
+    logger.info(
+        "Computing postcode neighbourhoods using KNN (k=%d)",
+        settings.N_NEIGHBORS
     )
 
-    output.to_csv(settings.DATA_DIR / 'output.csv', index=False)    
+    neighbors = svoc_knn(
+        settings=settings, 
+        df_input=df_input, 
+        df_benchmark=df_benchmark, 
+        k=settings.N_NEIGHBORS,
+        save=False
+    )
+
+    logger.info("Postcode neighbourhoods computed (%d groups)", len(neighbors))
+
+    logger.info("Starting record linkage")
+    output = svoc_record_linkage(
+        settings=settings, 
+        df_input=df_input, 
+        df_benchmark=df_benchmark,
+        groups=neighbors,
+        save=True
+    )
+
+    logger.info("Record linkage completed (%d matched rows)", len(output))
+    logger.info("SVOC pipeline finished successfully")
+
+def main():
+    logger.info("Starting SVOC pipeline")
+    settings = get_settings()
+    logger.info("Settings loaded")
+    svoc_pipeline(settings=settings)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        logger.exception("SVOC pipeline failed")
+        raise

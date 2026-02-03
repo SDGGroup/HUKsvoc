@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from pydantic import BaseModel,Field, model_validator
+from pydantic import BaseModel, Field, model_validator#, ConfigDict
 from pydantic_settings import  BaseSettings, SettingsConfigDict
 from svoc.constants import SUPERVISED_MODELS_FILENAME
 from svoc.supervised.enums import SupervisedModel
@@ -12,6 +12,10 @@ class DataColumns(BaseModel):
     OUTLET_NAME: str = "OUTLET_NAME"
     ADDRESS: str = "ADDRESS"
     POSTCODE: str = "POSTCODE"
+    LATITUDE: Optional[str] = "LATITUDE"
+    LONGITUDE: Optional[str] = "LONGITUDE"
+
+    # model_config = ConfigDict(extra="allow") # Allows extra values
 
 class Settings(BaseSettings):
 
@@ -28,16 +32,28 @@ class Settings(BaseSettings):
     INPUT_DATATABLE: str =  ""
     BENCHMARK_DATATABLE: str = ""
 
-
     INPUT_COLUMNS: DataColumns = Field(default_factory=DataColumns)
     BENCHMARK_COLUMNS: DataColumns = Field(default_factory=DataColumns)
     @property
     def INPUT_COLUMNS_DICT(self) -> dict[str, str]:
-        return self.INPUT_COLUMNS.model_dump()
+        return self.INPUT_COLUMNS.model_dump(exclude_none=True)
     @property
     def BENCHMARK_COLUMNS_DICT(self) -> dict[str, str]:
-        return self.BENCHMARK_COLUMNS.model_dump()
-
+        return self.BENCHMARK_COLUMNS.model_dump(exclude_none=True)
+    
+    def _core_columns(self, columns: dict[str, str]) -> dict[str, str]:
+        return {
+            k: v
+            for k, v in columns.items()
+            if k not in {"LATITUDE", "LONGITUDE"}
+        }
+    @property
+    def INPUT_CORE_COLUMNS_DICT(self) -> dict[str, str]:
+        return self._core_columns(self.INPUT_COLUMNS_DICT)
+    @property
+    def BENCHMARK_CORE_COLUMNS_DICT(self) -> dict[str, str]:
+        return self._core_columns(self.BENCHMARK_COLUMNS_DICT)
+    
     MODELS_DIR: Path = Path("./models")
     @property
     def SUPERVISED_MODELS_PATHS(self) -> dict[SupervisedModel, Path]:
@@ -47,6 +63,7 @@ class Settings(BaseSettings):
         }
 
     N_MATCHES: int = Field(3, ge=1)
+    N_NEIGHBORS: Optional[int] = Field(6, ge=1)
     BLOCK_COL: Optional[str] = "POSTCODE"
 
     model_config = SettingsConfigDict(
@@ -66,7 +83,7 @@ class Settings(BaseSettings):
             )
             return values
 
-        allowed_keys = set(DataColumns.model_fields.keys())
+        allowed_keys = set(values.INPUT_COLUMNS_DICT.keys())
 
         if values.BLOCK_COL not in allowed_keys:
             raise ValueError(

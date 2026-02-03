@@ -2,6 +2,14 @@ import pickle
 from pathlib import Path
 import pandas as pd
 from svoc.settings import Settings
+import logging
+
+def get_logger() -> logging.Logger:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(message)s"
+    )
+    return logging.getLogger(__name__)
 
 def concat_l(l):
     out = pd.concat(

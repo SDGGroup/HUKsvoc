@@ -1,4 +1,7 @@
 import pandas as pd
+from tqdm import tqdm
+from pathlib import Path
+
 from svoc.datapreparation import split_df
 from svoc.utils import concat_l
 from svoc.automatic.features import get_features
@@ -6,10 +9,7 @@ from svoc.automatic.match import find_automatic_matches
 from svoc.automatic.models import Distance
 from svoc.supervised.enums import SupervisedModel
 from svoc.supervised.match import find_supervised_matches
-from tqdm import tqdm
 from svoc.constants import DEFAULT_DISTANCES, DistanceMethod
-from pathlib import Path
-import json
 
 def get_matches_with_blocking(
         df_benchmark: pd.DataFrame, 
@@ -84,26 +84,26 @@ def get_matches_with_clusters(
         df_input: pd.DataFrame, 
         distances: list[Distance], 
         filters: list[DistanceMethod], 
-        block_col: str | None = None, 
+        groups: dict | None = None, 
         n_matches: int = 3, 
         verbose: bool = True,
         models_path_dict: dict[SupervisedModel, Path] | None = None,
         ):
-
-    with open("./data/postcode.json", "r") as f:
-        groups = json.load(f)
+    
+    if groups is None:
+        raise ValueError("groups parameter must be provided for clustering-based matching.")
 
     l_all_matches = []
     l_features = []
     l_remaining_features = []
-    # for i, group in enumerate(tqdm(results_df['GROUP'].tolist())):#[::-1])):
+
     for pc, neighbors in tqdm(groups.items()):
         
         if verbose:
             print(f"{pc}: {neighbors}")       
         
-        df_x_filtered = df_benchmark[df_benchmark[block_col].isin([pc])]#.drop_duplicates()
-        df_y_filtered = df_input[df_input[block_col].isin(neighbors)]#.drop_duplicates()
+        df_x_filtered = df_benchmark[df_benchmark['POSTCODE'].isin([pc])]#.drop_duplicates()
+        df_y_filtered = df_input[df_input['POSTCODE'].isin(neighbors)]#.drop_duplicates()
         
         if df_x_filtered.empty or df_y_filtered.empty:
             continue # skip empty groups
@@ -175,3 +175,4 @@ def prepare_output(
     out.sort_values(by=['ID_1', 'rank'], ascending=[True, True], na_position='last', inplace=True)
 
     return out
+
