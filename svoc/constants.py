@@ -66,6 +66,8 @@ DISTANCES: list[Distance] = DEFAULT_DISTANCES + [
     Distance('OUTLET_NAME_CLEAN', DistanceMethod.WORDSMATCH, 'outlet_name_clean_in2'),
     Distance('ADDRESS', DistanceMethod.WORDSMATCH, 'address_in2'),
     Distance('ADDRESS_CLEAN', DistanceMethod.WORDSMATCH, 'address_clean_in2'),
+    Distance('POSTCODE', DistanceMethod.EXACT, 'postcode'),
+    Distance('POSTCODE', DistanceMethod.JAROWINKLER, 'postcode_jaro'),
 ]
 
 DISTANCE_LABELS: frozenset[str] = frozenset(
@@ -273,63 +275,78 @@ filter_outletnameclean_qgram_address_qgram = {
     "address_qgram": 0.65,
 }
 
+
 filter_outletnameclean_jaro_addressclean_levenshtein = {
     "outlet_name_clean_jarowinkler": 0.65,
     "address_clean_levenshtein": 0.65,
+    "postcode_jaro": 0.8,
 }
 filter_outletnameclean_levenshtein_addressclean_cosine = {
     "outlet_name_clean_levenshtein": 0.65,
     "address_clean_cosine": 0.65,
+    "postcode_jaro": 0.8,
 }
 filter_outletnameclean_jaro_addressclean_cosine = {
     "outlet_name_clean_jarowinkler": 0.65,
     "address_clean_cosine": 0.65,
+    "postcode_jaro": 0.8,
 }
 filter_outletnameclean_jaro_addressclean_jaro = {
     "outlet_name_clean_jarowinkler": 0.60,
     "address_clean_jarowinkler": 0.60,
+    "postcode_jaro": 0.8,
 }
 
 ## Univariate
 filter_eq_outletname = {
     "outlet_name": 0.5,
-    "address_cosine": 0
+    "address_cosine": 0,
+    "postcode_jaro": 0.8,
 }
 filter_eq_address = {
     "outlet_name_cosine": 0,
-    "address": 0.5
+    "address": 0.5,
+    "postcode_jaro": 0.8,
 }
 filter_eq_outletnameclean = {
     "outlet_name_clean": 0.5,
-    "address_cosine": 0
+    "address_cosine": 0,
+    "postcode_jaro": 0.8,
 }
 filter_eq_addressclean = {
     "outlet_name_cosine": 0,
-    "address_clean": 0.5
+    "address_clean": 0.5,
+    "postcode_jaro": 0.8,
 }
 filter_outletnamecleanin2 = {
     "outlet_name_clean_in2": 0.5,
-    "address_cosine": 0
+    "address_cosine": 0,
+    "postcode_jaro": 0.8,
 }
 filter_addresscleanin2 = {
     "outlet_name_cosine": 0,
-    "address_clean_in2": 0.5
+    "address_clean_in2": 0.5,
+    "postcode_jaro": 0.8,
 }
 filter_addressclean_cosine = {
     "address_clean_cosine": 0.80,
-    "outlet_name_clean_cosine": 0.30
+    "outlet_name_clean_cosine": 0.30,
+    "postcode_jaro": 0.8,
 }
 filter_addressclean_levenshtein = {
     "address_clean_levenshtein": 0.80,
-    "outlet_name_clean_cosine": 0.30
+    "outlet_name_clean_cosine": 0.30,
+    "postcode_jaro": 0.8,
 }
 filter_addressclean_jarowinkler = {
     "address_clean_jarowinkler": 0.80,
-    "outlet_name_clean_cosine": 0.30
+    "outlet_name_clean_cosine": 0.30,
+    "postcode_jaro": 0.8,
 }
 filter_addressclean_levenshtein2 = {
     "address_clean_levenshtein": 0.80,
-    "outlet_name_clean_levenshtein": 0
+    "outlet_name_clean_levenshtein": 0,
+    "postcode_jaro": 0.8,
 }
 
 FILTERS_AUTO= [

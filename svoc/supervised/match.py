@@ -1,6 +1,9 @@
+import json
 import pandas as pd
 import recordlinkage as rl
 from pathlib import Path
+
+from tqdm import tqdm
 from svoc.utils import load_pickle, save_pickle, concat_l
 from svoc.supervised.enums import SupervisedModel
 from svoc.settings import Settings
@@ -119,14 +122,30 @@ def train_all_models(
         .index
     )
 
-    training_features = get_features(
-        distances, 
-        df_x=df_benchmark_clean, 
-        df_y=df_input_clean,
-        block_col=block_col, 
-        window=window
-        )
-    
+    ## OLD: Blocking
+    # training_features = get_features(
+    #     distances, 
+    #     df_x=df_benchmark_clean, 
+    #     df_y=df_input_clean,
+    #     block_col=block_col, 
+    #     window=window
+    #     )
+    ## NEW: Similar postcodes
+    with open("./data/postcode.json", "r") as f:
+        groups = json.load(f)
+    training_features = []
+    for pc, neighbors in tqdm(groups.items()):
+        df_x_filtered = df_benchmark_clean[df_benchmark_clean[block_col].isin([pc])]#.drop_duplicates()
+        df_y_filtered = df_input_clean[df_input_clean[block_col].isin(neighbors)]#.drop_duplicates()
+        
+        if df_x_filtered.empty or df_y_filtered.empty:
+            continue # skip empty groups
+
+        feats = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, njobs=1)
+        training_features.append(feats)
+    training_features = concat_l(training_features)
+
+
     training_features = (training_features[training_features["ID_1"].isin(matched_indexes)]
                         .set_index(["ID_1","ID_2"]))
     

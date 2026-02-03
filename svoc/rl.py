@@ -78,6 +78,60 @@ def get_matches(
 
     return all_matches, concat_l(l_features), concat_l(l_remaining_features)
 
+import json
+def get_matches_new(
+        df_benchmark: pd.DataFrame, 
+        df_input: pd.DataFrame, 
+        distances: list[Distance], 
+        filters: list[DistanceMethod], 
+        block_col: str | None = None, 
+        n_matches: int = 3, 
+        verbose: bool = True,
+        models_path_dict: dict[SupervisedModel, Path] | None = None,
+        ):
+
+    with open("./data/postcode.json", "r") as f:
+        groups = json.load(f)
+
+    l_all_matches = []
+    l_features = []
+    l_remaining_features = []
+    # for i, group in enumerate(tqdm(results_df['GROUP'].tolist())):#[::-1])):
+    for pc, neighbors in tqdm(groups.items()):
+        
+        if verbose:
+            print(f"{pc}: {neighbors}")       
+        
+        df_x_filtered = df_benchmark[df_benchmark[block_col].isin([pc])]#.drop_duplicates()
+        df_y_filtered = df_input[df_input[block_col].isin(neighbors)]#.drop_duplicates()
+        
+        if df_x_filtered.empty or df_y_filtered.empty:
+            continue # skip empty groups
+
+        features = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, njobs=1)
+        matches_auto, remaining_features = find_automatic_matches(filters, features, n=n_matches, verbose=verbose)
+        matches_supervised, remaining_features = find_supervised_matches(
+            remaining_features, 
+            models_path_dict=models_path_dict
+            )
+        
+        l_all_matches.append(matches_auto)
+        l_all_matches.append(matches_supervised)
+        l_features.append(features)
+        l_remaining_features.append(remaining_features)
+
+    if not l_all_matches:
+        print("⚠️ No matches found")
+    else:
+        all_matches = (
+            concat_l(l_all_matches)
+            .sort_values(by=['ID_1', 'ID_filter', 'score'], ascending=[True, True, False], na_position='last')
+            .assign(rank=lambda x: x.groupby('ID_1').cumcount() + 1)
+        )
+        all_matches = all_matches[all_matches['rank'] <= n_matches]
+
+    return all_matches, concat_l(l_features), concat_l(l_remaining_features)
+
 
 def prepare_output( 
         matches: pd.DataFrame,

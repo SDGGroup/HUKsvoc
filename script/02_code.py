@@ -35,6 +35,47 @@ df_input, df_benchmark = read_data(settings)
 # prova a usare index.sortedneighbourhood()
 # https://recordlinkage.readthedocs.io/en/latest/ref-index.html#recordlinkage.index.SortedNeighbourhood
 
+
+def prepare_table(
+        all_matches: pd.DataFrame, 
+        df_benchmark: pd.DataFrame, 
+        df_input: pd.DataFrame,
+        benchmark_cols: dict,
+        input_cols: dict,
+        labels: list = ("_benchmark", "_input"),
+        keep_features: bool = False
+    ):
+
+    df_benchmark = rename_and_select_cols(df_benchmark, benchmark_cols)
+    df_input = rename_and_select_cols(df_input, input_cols)
+    all_matches[['ID_1']] = all_matches[['ID_1']].apply(lambda col: col.str.lower(), axis=1)
+    all_matches[['ID_2']] = all_matches[['ID_2']].apply(lambda col: col.str.lower(), axis=1)
+    df_input[['ID']] = df_input[['ID']].apply(lambda col: col.str.lower(), axis=1)
+    df_benchmark[['ID']] = df_benchmark[['ID']].apply(lambda col: col.str.lower(), axis=1)
+    
+    if not keep_features:
+        all_matches = all_matches[['ID_1', 'ID_2', 'ID_filter', 'rank', "score" ,"match_type", "model"]]
+
+    df_match_final = (all_matches
+                    .merge(
+                         df_benchmark,
+                         left_on='ID_1',
+                         right_on='ID'
+                          )
+                    .drop(columns=['ID'])
+                    .merge(
+                        df_input,
+                        left_on='ID_2',
+                        right_on='ID', 
+                        suffixes=labels
+                        )
+                    .drop(columns=['ID'])
+                    .rename(columns={'ID_1': benchmark_cols['ID'], 'ID_2': input_cols['ID']})
+                    )
+
+    return df_match_final
+
+
 #----------------------------------------------------------
 ## Data Preparation
 
@@ -64,21 +105,68 @@ df_inner = (df_input_clean
 #     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
 #     parse_address=False, get_town=False, rm_address_noise=True)
 
-
-#----------------------------------------------------------
-
-## Auto + Superv Matching wrapper
-all_matches, features, remaining_features = get_matches(
+from svoc.rl import get_matches_new
+all_matches, features, remaining_features = get_matches_new(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
     block_col=settings.BLOCK_COL, 
     distances=DISTANCES, 
     filters=FILTERS_AUTO,
-    # n_groups = 1, window = 3,
-    n_groups = 15, window = 1,
     n_matches=settings.N_MATCHES, verbose=False,
     models_path_dict=settings.SUPERVISED_MODELS_PATHS
     )
+
+cfr = (all_matches #[['ID_1','ID_2', 'rank']]
+ .merge(all_matches_old[['ID_1','ID_2', 'rank']], 
+ on = ['ID_1','ID_2'], 
+ how='outer', 
+ suffixes=('_new','_old')))
+
+df_match_final = prepare_table(
+    all_matches=cfr,
+    df_benchmark=df_benchmark,
+    df_input=df_input,
+    benchmark_cols=settings.BENCHMARK_COLUMNS_DICT,
+    input_cols=settings.INPUT_COLUMNS_DICT,
+    keep_features=True
+)
+g = df_inner[['bowimiid', 'sapcode']].copy()
+g[['bowimiid']] = g[['bowimiid']].apply(lambda col: col.str.lower(), axis=1)
+g[['sapcode']] = g[['sapcode']].apply(lambda col: col.str.lower(), axis=1)
+g['aux'] = 1
+g
+df_match_final = df_match_final.merge(g.rename(columns={'sapcode': 'SapCode'}), how='left')
+
+df_match_final[df_match_final['aux'] == 1] #706
+df_match_final[df_match_final['aux'] == 1][~df_match_final['rank_new'].isna()] #705
+df_match_final[df_match_final['aux'] == 1][~df_match_final['rank_old'].isna()] #668
+df_match_final[df_match_final['aux'] == 1][~df_match_final['rank_new'].isna()][df_match_final['rank_old'].isna()] # 38
+df_match_final[df_match_final['aux'] == 1][~df_match_final['rank_old'].isna()][df_match_final['rank_new'].isna()] # 1
+df_match_final.to_excel("./data/cfr2.xlsx", index=False)
+#----------------------------------------------------------
+from svoc.supervised.enums import SupervisedModel
+# from svoc.constants import SUPERVISED_MODELS_FILENAME
+# from pathlib import Path
+
+## Auto + Superv Matching wrapper
+all_matches_old, features, remaining_features = get_matches(
+    df_input=df_input_clean, 
+    df_benchmark=df_benchmark_clean, 
+    block_col=settings.BLOCK_COL, 
+    distances=DISTANCES, 
+    filters=FILTERS_AUTO,
+    # n_groups = 1, window = 3,         # Sorted Neighbourhood
+    n_groups = 15, window = 1,          # Blocking
+    n_matches=settings.N_MATCHES, verbose=False,
+    models_path_dict= settings.SUPERVISED_MODELS_PATHS
+        # {
+        #     SupervisedModel.LOGREG: Path("./models/old") / SUPERVISED_MODELS_FILENAME[SupervisedModel.LOGREG],
+        #     SupervisedModel.SVM: Path("./models/old") / SUPERVISED_MODELS_FILENAME[SupervisedModel.SVM],
+        #     SupervisedModel.NAIVE_BAYES: Path("./models/old") / SUPERVISED_MODELS_FILENAME[SupervisedModel.NAIVE_BAYES],
+        # }
+    )
+
+
 
 output = prepare_output(
     matches=all_matches,
@@ -150,46 +238,7 @@ all_matches = pd.concat([all_matches_auto, all_matches_supervised], axis=0, igno
 
 #--------------------------------------------------------------------------------------------------------
 
-def prepare_output(
-        all_matches: pd.DataFrame, 
-        df_benchmark: pd.DataFrame, 
-        df_input: pd.DataFrame,
-        benchmark_cols: dict,
-        input_cols: dict,
-        labels: list = ("_benchmark", "_input"),
-        keep_features: bool = False
-    ):
-
-    df_benchmark = rename_and_select_cols(df_benchmark, benchmark_cols)
-    df_input = rename_and_select_cols(df_input, input_cols)
-    all_matches[['ID_1']] = all_matches[['ID_1']].apply(lambda col: col.str.lower(), axis=1)
-    all_matches[['ID_2']] = all_matches[['ID_2']].apply(lambda col: col.str.lower(), axis=1)
-    df_input[['ID']] = df_input[['ID']].apply(lambda col: col.str.lower(), axis=1)
-    df_benchmark[['ID']] = df_benchmark[['ID']].apply(lambda col: col.str.lower(), axis=1)
-    
-    if not keep_features:
-        all_matches = all_matches[['ID_1', 'ID_2', 'ID_filter', 'rank', "score" ,"match_type", "model"]]
-
-    df_match_final = (all_matches
-                    .merge(
-                         df_benchmark,
-                         left_on='ID_1',
-                         right_on='ID'
-                          )
-                    .drop(columns=['ID'])
-                    .merge(
-                        df_input,
-                        left_on='ID_2',
-                        right_on='ID', 
-                        suffixes=labels
-                        )
-                    .drop(columns=['ID'])
-                    .rename(columns={'ID_1': benchmark_cols['ID'], 'ID_2': input_cols['ID']})
-                    )
-
-    return df_match_final
-
-df_match_final = prepare_output(
+df_match_final = prepare_table(
     all_matches=output,
     df_benchmark=df_benchmark,
     df_input=df_input,
@@ -212,8 +261,6 @@ df_match_final[df_match_final["ID_filter"]==f][["OUTLET_NAME_input", "OUTLET_NAM
 df_match_final=df_match_final.rename(columns={settings.BENCHMARK_COLUMNS_DICT['ID']: 'ID_benchmark', settings.INPUT_COLUMNS_DICT['ID']: 'ID_input'})
 # df_match_final=df_match_final.rename(columns={'BowimiId': 'ID_benchmark', 'CgaId': 'ID_input'})
 
-df_match_final[['OUTLET_NAME_input', 'OUTLET_NAME_benchmark','rank', 'ID_filter']]
-df_match_final[['ADDRESS_input', 'ADDRESS_benchmark','rank', 'ID_filter']]
 
 (df_benchmark_clean.reset_index())["ID"].nunique()
 df_match_final["ID_benchmark"].nunique()
@@ -225,9 +272,6 @@ multiple_matches = df_match_final[
         n_matches[n_matches['num_matches'] > 1]['ID_1']
         )
     ]
-
-multiple_matches[['OUTLET_NAME_benchmark','OUTLET_NAME_input','rank']]
-multiple_matches[['ADDRESS_benchmark', 'ADDRESS_input','rank']]
 
 
 ## Controllo vs. match certi
@@ -245,6 +289,18 @@ nmatches=totali.groupby('ID_benchmark').size()
 multiple_matches[multiple_matches["ID_benchmark"].isin(nmatches[nmatches>1].index.tolist())][["ID_benchmark","OUTLET_NAME_benchmark","OUTLET_NAME_input","rank"]]
 multiple_matches[multiple_matches["ID_benchmark"].isin(nmatches[nmatches>1].index.tolist())][["ID_benchmark","ADDRESS_benchmark","ADDRESS_input","rank"]]
 
+## Get recall
+aux = (df_inner
+ .rename(columns={'sapcode': 'ID_benchmark', 'bowimiid': 'ID_input'})
+ .merge(
+      make_upper_str(df_match_final[["ID_benchmark","ID_input","rank"]]),
+      on = ["ID_benchmark", 'ID_input'],
+      how = 'left'
+ ))
+
+df_inner.columns
+100 * df_inner[df_inner["POSTCODE_input"]!=df_inner["POSTCODE_benchmark"]].shape[0] / aux.shape[0]
+100 * aux[~aux['rank'].isna()].shape[0] / aux.shape[0] # recall = indovinati/totali verificati
 
 # Corretti
 c=totali[~totali['ID_input_auto'].isna() & ~totali['ID_input'].isna() & (totali['ID_input_auto'] == totali['ID_input'])]
@@ -269,8 +325,7 @@ m[["POSTCODE_input",'ADDRESS_CLEAN_input',
    "POSTCODE_benchmark",'ADDRESS_CLEAN_benchmark']]
 m
 ## PostCode SBAGLIATO
-m[m["POSTCODE_input"]!=m["POSTCODE_benchmark"]].to_excel("./data/m_postcode_wrong.xlsx", index=False)
-
+# m[m["POSTCODE_input"]!=m["POSTCODE_benchmark"]].to_excel("./data/m_postcode_wrong.xlsx", index=False)
 m[m["POSTCODE_input"]!=m["POSTCODE_benchmark"]][["ADDRESS_CLEAN_input",'ADDRESS_CLEAN_benchmark']]
 m[m["POSTCODE_input"]!=m["POSTCODE_benchmark"]][["OUTLET_NAME_CLEAN_input",'OUTLET_NAME_CLEAN_benchmark']]
 ## PostoCode GIUSTO
@@ -288,13 +343,16 @@ mfeat.iloc[0]
 
 num = mfeat.select_dtypes(include='number')
 (
-   num[num > 0.8] 
+   num[num > 0.6] 
     .stack()
     .reset_index()
     .rename(columns={'level_0': 'row_id', 'level_1': 'column', 0: 'value'})
 )
 
 mfeat[mfeat['address_clean_levenshtein']>.8]['outlet_name_clean_cosine']
+
+
+m.to_excel("./data/missing_matches.xlsx", index=False)
 
 # Sbagliati
 s = (totali[
