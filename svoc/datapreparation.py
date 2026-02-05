@@ -123,10 +123,9 @@ def remove_accents_and_regex(
 
     cols_to_clean = df_out.columns.difference(l_id_cols + l_cols_not_to_apply)
 
-    df_out[cols_to_clean] = df_out[cols_to_clean].map(
+    df_out[cols_to_clean] = df_out[cols_to_clean].applymap(
         lambda x: unidecode(x) if pd.notna(x) else x
     )
-
     df_out[cols_to_clean] = df_out[cols_to_clean].apply(
         lambda col: col.str.replace(re_pattern, '', regex=True)
     )

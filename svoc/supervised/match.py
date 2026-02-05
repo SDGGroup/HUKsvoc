@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import recordlinkage as rl
 from pathlib import Path
+import warnings
 
 from tqdm import tqdm
 from svoc.utils import load_pickle, save_pickle, concat_l
@@ -94,6 +95,7 @@ def find_supervised_matches(
 
     return all_matches_supervised, remaining_features
 
+
 def train_all_models(
         df_input: pd.DataFrame,
         input_cols_id_benchmark: str,
@@ -101,10 +103,13 @@ def train_all_models(
         df_benchmark: pd.DataFrame,
         benchmark_cols: dict,
         distances: list[Distance], 
+        groups: dict | None = None, 
         block_col: str | None = None,
         window: int = 1,
         path_models: dict[SupervisedModel, str] | None = None,
 ):
+
+
     # Data Preparation
     df_benchmark_clean = prepare_data(
     df=df_benchmark, dict_cols=benchmark_cols)
@@ -122,28 +127,29 @@ def train_all_models(
         .index
     )
 
-    ## OLD: Blocking
-    # training_features = get_features(
-    #     distances, 
-    #     df_x=df_benchmark_clean, 
-    #     df_y=df_input_clean,
-    #     block_col=block_col, 
-    #     window=window
-    #     )
-    ## NEW: Similar postcodes
-    with open("./data/postcode.json", "r") as f:
-        groups = json.load(f)
-    training_features = []
-    for pc, neighbors in tqdm(groups.items()):
-        df_x_filtered = df_benchmark_clean[df_benchmark_clean[block_col].isin([pc])]#.drop_duplicates()
-        df_y_filtered = df_input_clean[df_input_clean[block_col].isin(neighbors)]#.drop_duplicates()
-        
-        if df_x_filtered.empty or df_y_filtered.empty:
-            continue # skip empty groups
+    if groups is None:
+        warnings.warn("groups parameter is None. The parameter must be provided for clustering-based matching. \
+            Running model training with blocking instead of clustering.")
 
-        feats = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, njobs=1)
-        training_features.append(feats)
-    training_features = concat_l(training_features)
+        training_features = get_features(
+            distances, 
+            df_x=df_benchmark_clean, 
+            df_y=df_input_clean,
+            block_col=block_col, 
+            window=window
+            )
+    else:
+        training_features = []
+        for pc, neighbors in tqdm(groups.items()):
+            df_x_filtered = df_benchmark_clean[df_benchmark_clean[block_col].isin([pc])]#.drop_duplicates()
+            df_y_filtered = df_input_clean[df_input_clean[block_col].isin(neighbors)]#.drop_duplicates()
+            
+            if df_x_filtered.empty or df_y_filtered.empty:
+                continue # skip empty groups
+
+            feats = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, njobs=1)
+            training_features.append(feats)
+        training_features = concat_l(training_features)
 
 
     training_features = (training_features[training_features["ID_1"].isin(matched_indexes)]
