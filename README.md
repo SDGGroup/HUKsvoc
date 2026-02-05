@@ -35,7 +35,7 @@ The workflow comprehends the following main steps:
 To prevent the comparison between all the possible pairs of records from the benchmark and the input dataset, K-NN has been used to group the neighbouring postal codes. This step reduces the search space so that only the records within the same cluster are compared. The clusters can be saved into a $\texttt{.json}$ file and re-used.
 2. **Features Calculation**. Several similarity features are calculated for the outlet name, address and postal code fields of all the pairs of records whose postal code is within the same cluster. The higher the similarity feature, the most two fields are similar. 
 3. **Automatic Matching**. The record are matched through the application of several filters on the features. 
-4. **Probabilistic Matching**. Three different supervised model are used to predict further matches among those records for the whom the automatic matching did not find N matches. The models can be trained using the $\texttt{./script/01_training.py}$ script, and saved into the $\texttt{./models/}$ folder.
+4. **Probabilistic Matching**. Three different supervised model are used to predict further matches among those records for the whom the automatic matching did not find N matches. The models can be trained using the ./script/01_training.py script, and saved into the $\texttt{./models/}$ folder.
 
 For further information see $\texttt{./doc/doc.ipynb}$.
 
