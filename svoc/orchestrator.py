@@ -25,7 +25,7 @@ def svoc_knn(
         raise KeyError("Missing required keys: both 'LATITUDE' and 'LONGITUDE' columns must be specified in the settings.")
     
     def prepare_data_for_knn(df: pd.DataFrame, cols: dict):
-        df_out = rename_and_select_cols(df=df, dict_cols={k: cols[k] for k in ['POSTCODE', LATITUDE, LONGITUDE]})
+        df_out = rename_and_select_cols(df=df, dict_cols={k: cols[k] for k in [settings.BLOCK_COL, LATITUDE, LONGITUDE]})
         df_out = make_upper_str(df=df_out)
         df_out = remove_accents_and_regex(
             df=df_out, 
@@ -44,7 +44,7 @@ def svoc_knn(
         df=df_benchmark, 
         cols=settings.BENCHMARK_COLUMNS_DICT
         )
-    all_pc = list(pc_bench['POSTCODE'].copy())
+    all_pc = list(pc_bench[settings.BLOCK_COL].copy())
     pc_bench = get_radians(pc_bench)
 
 
@@ -63,8 +63,8 @@ def svoc_knn(
     distances, indices = nn.kneighbors(pc_bench[[LATITUDE,LONGITUDE]])
 
     groups = {}
-    for i, cap in enumerate(pc_bench["POSTCODE"]):
-        neighbors = pc_input.iloc[indices[i]]["POSTCODE"].tolist()
+    for i, cap in enumerate(pc_bench[settings.BLOCK_COL]):
+        neighbors = pc_input.iloc[indices[i]][settings.BLOCK_COL].tolist()
         neighbors = list(dict.fromkeys(neighbors))
         groups[cap] = neighbors
 
@@ -111,6 +111,7 @@ def svoc_record_linkage(
         df_benchmark=df_benchmark_clean, 
         distances=DISTANCES, 
         filters=FILTERS_AUTO,
+        block_col=settings.BLOCK_COL,
         groups=groups,
         n_matches=settings.N_MATCHES, verbose=False,
         models_path_dict=settings.SUPERVISED_MODELS_PATHS

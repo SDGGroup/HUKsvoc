@@ -63,7 +63,7 @@ class Settings(BaseSettings):
         }
 
     N_MATCHES: int = Field(3, ge=1)
-    N_NEIGHBORS: Optional[int] = Field(6, ge=1)
+    K_NEIGHBOURS: Optional[int] = Field(6, ge=1)
     BLOCK_COL: Optional[str] = "POSTCODE"
 
     model_config = SettingsConfigDict(

@@ -84,6 +84,7 @@ def get_matches_with_clusters(
         df_input: pd.DataFrame, 
         distances: list[Distance], 
         filters: list[DistanceMethod], 
+        block_col: str,
         groups: dict | None = None, 
         n_matches: int = 3, 
         verbose: bool = True,
@@ -102,8 +103,8 @@ def get_matches_with_clusters(
         if verbose:
             print(f"{pc}: {neighbors}")       
         
-        df_x_filtered = df_benchmark[df_benchmark['POSTCODE'].isin([pc])]#.drop_duplicates()
-        df_y_filtered = df_input[df_input['POSTCODE'].isin(neighbors)]#.drop_duplicates()
+        df_x_filtered = df_benchmark[df_benchmark[block_col].isin([pc])]#.drop_duplicates()
+        df_y_filtered = df_input[df_input[block_col].isin(neighbors)]#.drop_duplicates()
         
         if df_x_filtered.empty or df_y_filtered.empty:
             continue # skip empty groups

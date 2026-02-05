@@ -19,14 +19,14 @@ def svoc_pipeline(
     
     logger.info(
         "Computing postcode neighbourhoods using KNN (k=%d)",
-        settings.N_NEIGHBORS
+        settings.K_NEIGHBOURS
     )
 
     neighbors = svoc_knn(
         settings=settings, 
         df_input=df_input, 
         df_benchmark=df_benchmark, 
-        k=settings.N_NEIGHBORS,
+        k=settings.K_NEIGHBOURS,
         save=False
     )
 
