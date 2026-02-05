@@ -128,8 +128,12 @@ def train_all_models(
     )
 
     if groups is None:
-        warnings.warn("groups parameter is None. The parameter must be provided for clustering-based matching. \
-            Running model training with blocking instead of clustering.")
+        warnings.warn("""
+                      groups parameter is None. 
+                      The parameter must be provided for clustering-based matching.
+                      Running model training with blocking instead of clustering.
+                      """)
+
 
         training_features = get_features(
             distances, 
