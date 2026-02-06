@@ -18,3 +18,9 @@ include = ["svoc*"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.package-dir]
+"" = "."
+
+[project.urls]
+Homepage = "https://github.com/SDGGroup/HUKsvoc"
