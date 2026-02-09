@@ -1,17 +1,67 @@
 
+"""Data preparation module for outlet matching.
+
+This module provides functions for cleaning and standardizing outlet and address data,
+including:
+- Column renaming and selection
+- Text normalization (uppercase conversion, accent removal)
+- Address parsing and component extraction
+- Noise word removal from outlet names and addresses
+- Data splitting for parallel processing
+"""
+
 import pandas as pd
 import numpy as np
 import re
 from unidecode import unidecode
 from svoc.constants import NOISE_WORDS_OUTLETNAME, NOISE_WORDS_ADDRESS, NOISE_WORDS_ADDRESS_REPLACE
 
-def rename_and_select_cols(df, dict_cols):
+def rename_and_select_cols(
+        df: pd.DataFrame, 
+        dict_cols: dict[str, str]
+        ) -> pd.DataFrame:
+    """Rename and select specific columns from a DataFrame.
+    
+    Args:
+        df: Input DataFrame to process
+        dict_cols: Dictionary mapping desired column names to current column names
+        
+    Returns:
+        DataFrame with renamed and selected columns
+        
+    Raises:
+        ValueError: If required columns are missing from the DataFrame
+        TypeError: If df is not a DataFrame or dict_cols is not a dictionary
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    if not isinstance(dict_cols, dict):
+        raise TypeError(f"dict_cols must be a dictionary, got {type(dict_cols).__name__}")
+    
     inv_dict_cols = {v: k for k, v in dict_cols.items()}
+    missing_cols = set(inv_dict_cols.keys()) - set(df.columns)
+    if missing_cols:
+        raise ValueError(f"Required columns missing from DataFrame: {sorted(missing_cols)}")
+    
     df_out = df.rename(columns=inv_dict_cols)
     df_out = df_out[dict_cols.keys()]
     return df_out
 
-def make_upper_str(df):
+def make_upper_str(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert all string columns to uppercase.
+    
+    Args:
+        df: Input DataFrame to process
+        
+    Returns:
+        DataFrame with all string columns converted to uppercase
+        
+    Raises:
+        TypeError: If df is not a DataFrame
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    
     df_out = df.copy()
 
     for col in df_out.select_dtypes(include="object"):
@@ -54,7 +104,35 @@ def make_upper_str(df):
     
 #     return out
 
-def parse_address_components(df, get_town=True):
+def parse_address_components(df: pd.DataFrame, get_town: bool = True) -> pd.DataFrame:
+    """Parse address components to extract the clean postcode, address and, optionally, town.
+    
+    Processes addresses to:
+    - Remove 'UK' suffix
+    - Extract postcode (last two words of the address, if they contain digits)
+    - Extract town (text after last comma in the address)
+    - Clean the remaining address
+    
+    Args:
+        df: DataFrame containing 'ADDRESS' and optionally 'POSTCODE' columns
+        get_town: If True, extract town from address. Default is True.
+        
+    Returns:
+        DataFrame with parsed address components (POSTCODE, TOWN, ADDRESS) if get_town is True,
+        otherwise (POSTCODE, ADDRESS).
+        
+    Raises:
+        ValueError: If required 'ADDRESS' and 'POSTCODE' columns are missing
+        TypeError: If df is not a DataFrame or get_town is not a boolean
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    if not isinstance(get_town, bool):
+        raise TypeError(f"get_town must be a boolean, got {type(get_town).__name__}")
+    if 'ADDRESS' not in df.columns:
+        raise ValueError("DataFrame must contain 'ADDRESS' column")
+    if 'POSTCODE' not in df.columns:
+        raise ValueError("DataFrame must contain 'POSTCODE' column")
     
     out = df.copy()
     
@@ -63,11 +141,11 @@ def parse_address_components(df, get_town=True):
     out['ADDRESS'] = out['ADDRESS'].astype(str)
 
     def process_row(address, get_town=True):
-        # --- 1. RIMOZIONE "UK" ---
+        # --- 1. Removing "UK" suffix ---
         address = re.sub(r',?\s*UK$', '', address)
         address = address.strip()
         
-        # --- 2. ESTRAZIONE POSTCODE (ULTIME 2 STRINGHE) ---
+        # --- 2. Extracting postcode (last two words if they contain digits) ---
         parts = address.split()
         postcode = None
         remaining_address = address
@@ -79,7 +157,7 @@ def parse_address_components(df, get_town=True):
 
         remaining_address = remaining_address.strip().strip(',').strip()
 
-        # --- 3. ESTRAZIONE CITTA (ULTIMA VIRGOLA) ---
+        # --- 3. Extracting town (text after last comma) ---
         if get_town:
             town = None
             final_address = remaining_address
@@ -110,14 +188,46 @@ def parse_address_components(df, get_town=True):
 def remove_accents_and_regex(
         df: pd.DataFrame, 
         re_pattern: str, 
-        l_id_cols: list | None = None,
-        l_cols_not_to_apply: list | None = None
+        l_id_cols: list[str] | None = None,
+        l_cols_not_to_apply: list[str] | None = None
     ) -> pd.DataFrame:
+    """Remove accents and apply regex pattern to clean text columns.
+    
+    Processes DataFrame by:
+    - Replacing 'NAN', 'nan', 'NONE' with empty strings
+    - Removing accents using unidecode
+    - Applying regex pattern to remove unwanted characters
+    - Replacing empty strings with NaN
+    
+    Args:
+        df: Input DataFrame to process
+        re_pattern: Regex pattern to apply for character removal
+        l_id_cols: List of ID columns to exclude from processing. Default is None.
+        l_cols_not_to_apply: List of columns to exclude from processing. Default is None.
+        
+    Returns:
+        Cleaned DataFrame
+        
+    Raises:
+        TypeError: If inputs are not of expected types
+        ValueError: If re_pattern is empty or invalid
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    if not isinstance(re_pattern, str):
+        raise TypeError(f"re_pattern must be a string, got {type(re_pattern).__name__}")
+    if not re_pattern:
+        raise ValueError("re_pattern cannot be empty")
     
     if l_cols_not_to_apply is None:
         l_cols_not_to_apply = []
     if l_id_cols is None:
         l_id_cols = []
+    
+    if not isinstance(l_id_cols, list):
+        raise TypeError(f"l_id_cols must be a list, got {type(l_id_cols).__name__}")
+    if not isinstance(l_cols_not_to_apply, list):
+        raise TypeError(f"l_cols_not_to_apply must be a list, got {type(l_cols_not_to_apply).__name__}")
 
     df_out = df.replace(['NAN', 'nan', 'NONE'], '')
 
@@ -134,14 +244,73 @@ def remove_accents_and_regex(
     df_out = df_out.replace('', np.nan)
     return df_out
 
-def remove_noise_words(df, col, words_to_remove, name = None):
+def remove_noise_words(
+        df: pd.DataFrame, 
+        col: str, 
+        words_to_remove: list[str], 
+        name: str | None = None
+    ) -> pd.DataFrame:
+    """Remove specified noise words from a text column.
+    
+    Args:
+        df: DataFrame to process
+        col: Column name to clean
+        words_to_remove: List of words to remove from the text
+        name: Name for the output column. If None, uses col name. Default is None.
+        
+    Returns:
+        DataFrame with cleaned column added
+        
+    Raises:
+        TypeError: If inputs are not of expected types
+        ValueError: If specified column doesn't exist
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    if not isinstance(col, str):
+        raise TypeError(f"col must be a string, got {type(col).__name__}")
+    if not isinstance(words_to_remove, list):
+        raise TypeError(f"words_to_remove must be a list, got {type(words_to_remove).__name__}")
+    if col not in df.columns:
+        raise ValueError(f"Column '{col}' not found in DataFrame. Available columns: {list(df.columns)}")
+    
     if name is None:
         name = col
     df[name] = df[col].apply(
         lambda x: ' '.join([word for word in str(x).split() if word not in words_to_remove]))
     return df
 
-def clean_address_noise_words(df, col, name=None):
+def clean_address_noise_words(
+        df: pd.DataFrame, 
+        col: str, 
+        name: str | None = None
+    ) -> pd.DataFrame:
+    """Clean address by standardizing abbreviations and removing noise.
+    
+    Performs intelligent address cleaning:
+    - Intelligently handles 'ST' (Street vs Saint based on context)
+    - Expands common address abbreviations (RD -> ROAD, AVE -> AVENUE, etc.) specified in the NOISE_WORDS_ADDRESS_REPLACE constant
+    - Removes punctuation and normalizes spacing
+    
+    Args:
+        df: Input DataFrame to process
+        col: Column name containing addresses to clean
+        name: Name for the output column. If None, uses col name. Default is None.
+        
+    Returns:
+        DataFrame with cleaned address column added
+        
+    Raises:
+        TypeError: If inputs are not of expected types
+        ValueError: If specified column doesn't exist
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    if not isinstance(col, str):
+        raise TypeError(f"col must be a string, got {type(col).__name__}")
+    if col not in df.columns:
+        raise ValueError(f"Column '{col}' not found in DataFrame. Available columns: {list(df.columns)}")
+    
     out = df.copy()
     
     if name is None:
@@ -151,39 +320,39 @@ def clean_address_noise_words(df, col, name=None):
         if not isinstance(address, str):
             return ""
         
-        # 2. Normalizza i punti (ST. -> ST) ma TIENI LE VIRGOLE per ora
+        # ------------------------------------
+        # 1. Replace ST with SAINT or STREET based on context
+
         address = address.replace('.', '') 
         
-        # --- LOGICA INTELLIGENTE PER "ST" ---
-        
-        # CASO A: SAINT (Inizio riga)
-        # Es: "ST PAULS ROAD" -> "SAINT PAULS ROAD"
+        # CASE A: SAINT (Start of the line)
+        # Example: "ST PAULS ROAD" -> "SAINT PAULS ROAD"
         address = re.sub(r'^ST\b', 'SAINT', address)
         
-        # CASO B: SAINT (Dopo un numero civico)
-        # Es: "10 ST JOHNS" -> "10 SAINT JOHNS"
-        # (?<=\d) è un lookbehind: cerca se c'è un numero prima dello spazio
+        # CASE B: SAINT (After a house number)
+        # Example: "10 ST JOHNS" -> "10 SAINT JOHNS"
+        # (?<=\d) is a lookbehind: checks if there is a number before the space
         address = re.sub(r'(?<=\d)\s+ST\b', ' SAINT', address)
         
-        # CASO C: SAINT (Dopo una virgola, probabile città)
-        # Es: "HIGH ST, ST ALBANS" -> "HIGH ST, SAINT ALBANS"
+        # CASE C: SAINT (After a comma, likely a city)
+        # Example: "HIGH ST, ST ALBANS" -> "HIGH ST, SAINT ALBANS"
         address = re.sub(r',\s*ST\b', ', SAINT', address)
         
-        # CASO D: STREET (Tutti gli altri casi rimasti)
-        # Se "ST" è sopravvissuto alle regole sopra, è quasi sicuramente Street
-        # Es: "REGENT ST LONDON" -> "REGENT STREET LONDON"
+        # CASE D: STREET (All other remaining cases)
+        # If "ST" survived the rules above, it is almost certainly Street
+        # Example: "REGENT ST LONDON" -> "REGENT STREET LONDON"
         address = re.sub(r'\bST\b', 'STREET', address)
         
         # ------------------------------------
 
-        # 3. Ora puoi rimuovere la punteggiatura residua (virgole, etc)
+        # 2. Remove punctuation (except spaces)
         address = re.sub(r'[^\w\s]', '', address)
 
-        # 4. ESPANSIONE ALTRE ABBREVIAZIONI (Standard)        
+        # 3. Expand other abbreviations        
         for pattern, replacement in NOISE_WORDS_ADDRESS_REPLACE.items():
             address = re.sub(pattern, replacement, address)
             
-        # 5. Normalizza spazi doppi
+        # 4. Normalize double spaces
         address = re.sub(r'\s+', ' ', address).strip()
         
         return address
@@ -191,7 +360,49 @@ def clean_address_noise_words(df, col, name=None):
     out[name] = out[col].apply(process_row)
     return out
 
-def prepare_data(df, dict_cols, parse_address = False, rm_address_noise = True, get_town = False):
+def prepare_data(
+        df: pd.DataFrame, 
+        dict_cols: dict[str, str], 
+        rm_address_noise: bool = True, 
+        parse_address: bool = False, 
+        get_town: bool = False
+    ) -> pd.DataFrame:
+    """Main data preparation pipeline for outlet matching.
+    
+    Comprehensive data preparation including:
+    1. Column renaming and selection
+    2. Uppercase conversion
+    3. Filtering out the outlets with 'DO NOT USE' in the name
+    4. Optional address parsing
+    5. Noise word removal and text cleaning
+    6. Accent removal and regex cleaning
+    7. Index setting by ID
+    
+    Args:
+        df: Input DataFrame containing outlet data
+        dict_cols: Dictionary mapping desired column names to current names
+        rm_address_noise: If True, clean addresses with smart abbreviation handling. Default is True.
+        parse_address: If True, parse address components. Default is False.
+        get_town: If True, extract town from address during parsing. Default is False.
+        
+    Returns:
+        Cleaned and prepared DataFrame indexed by ID
+        
+    Raises:
+        TypeError: If inputs are not of expected types
+        ValueError: If required columns are missing
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    if not isinstance(dict_cols, dict):
+        raise TypeError(f"dict_cols must be a dictionary, got {type(dict_cols).__name__}")
+    if not isinstance(parse_address, bool):
+        raise TypeError(f"parse_address must be a boolean, got {type(parse_address).__name__}")
+    if not isinstance(rm_address_noise, bool):
+        raise TypeError(f"rm_address_noise must be a boolean, got {type(rm_address_noise).__name__}")
+    if not isinstance(get_town, bool):
+        raise TypeError(f"get_town must be a boolean, got {type(get_town).__name__}")
+    
     out=rename_and_select_cols(df=df, dict_cols=dict_cols)
     out=make_upper_str(df=out)
 
@@ -219,7 +430,38 @@ def split_df(
         df: pd.DataFrame, 
         split_col: str, 
         num_groups: int
-    ):
+    ) -> pd.DataFrame:
+    """Split DataFrame into balanced groups based on value counts.
+    
+    Distributes unique values from split_col into num_groups groups,
+    balancing by total row count using a greedy algorithm.
+    
+    Args:
+        df: DataFrame to analyze
+        split_col: Column name to use for grouping
+        num_groups: Number of groups to create
+        
+    Returns:
+        DataFrame with columns:
+        - GROUP: List of values assigned to each group
+        - N_ELEMENTS: Number of unique values in each group
+        - N_ROWS: Total row count for each group
+        
+    Raises:
+        TypeError: If inputs are not of expected types
+        ValueError: If split_col doesn't exist or num_groups is invalid
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"df must be a pandas DataFrame, got {type(df).__name__}")
+    if not isinstance(split_col, str):
+        raise TypeError(f"split_col must be a string, got {type(split_col).__name__}")
+    if not isinstance(num_groups, int):
+        raise TypeError(f"num_groups must be an integer, got {type(num_groups).__name__}")
+    if split_col not in df.columns:
+        raise ValueError(f"Column '{split_col}' not found in DataFrame. Available columns: {list(df.columns)}")
+    if num_groups < 1:
+        raise ValueError(f"num_groups must be at least 1, got {num_groups}")
+    
     df_split = pd.DataFrame({'COUNT': df[[split_col]].value_counts()}).reset_index()
     df_split = df_split.rename(columns={split_col: 'GROUP'})
     groups = [[] for _ in range(num_groups)]

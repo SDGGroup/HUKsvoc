@@ -145,8 +145,7 @@ The pipeline generates a CSV file containing:
 
 - Top N matches per benchmark record (benchmark ID + input ID);
 - Similarity scores for each feature;
-- Match type (automatic vs supervised);
-- Confidence scores.
+- Match type (automatic vs supervised).
 
 ## Project Information
 

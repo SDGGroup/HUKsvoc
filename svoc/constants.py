@@ -1,4 +1,13 @@
 
+"""Constants and configuration for the SVOC (Single Value of Customer) matching system.
+
+This module defines:
+- Supervised model filenames
+- Noise words for data cleaning
+- Distance calculation methods and configurations
+- Filter definitions for automatic matching
+"""
+
 from pathlib import Path
 from pydantic import BaseModel, field_validator
 from typing import Dict
@@ -6,14 +15,28 @@ from svoc.supervised.enums import SupervisedModel
 from svoc.automatic.enums import DistanceMethod
 from svoc.automatic.models import Distance
 
+# ==============================================================================
+# SUPERVISED MODEL CONFIGURATIONS
+# ==============================================================================
+
+# Mapping of supervised models to their saved file names
 SUPERVISED_MODELS_FILENAME: dict[SupervisedModel, Path] = {
     SupervisedModel.LOGREG: "logreg_model.pkl",
     SupervisedModel.SVM: "svm_model.pkl",
     SupervisedModel.NAIVE_BAYES: "bayes_model.pkl",
 }
 
+# ==============================================================================
+# DATA CLEANING CONFIGURATIONS
+# ==============================================================================
+
+# Common words to remove from outlet names during cleaning
 NOISE_WORDS_OUTLETNAME = ["THE","BAR","PUB", "LTD", "TA"]
+
+# Common words to remove from addresses during cleaning
 NOISE_WORDS_ADDRESS = ["OF","ROAD", "RD", "STREET", "ST","AVENUE", "AV", "DRIVE", "DR", "LANE", "LN", "BOULEVARD", "BLVD", "COURT", "CT", "PLACE", "PL", "SQUARE", "SQ", "TERRACE", "TER", "CRESCENT", "CRES", "HIGHWAY", "HWY"]
+
+# Address abbreviations to expand for standardization
 NOISE_WORDS_ADDRESS_REPLACE = {
             r'\bRD\b': 'ROAD',
             r'\bAVE\b': 'AVENUE',
@@ -34,12 +57,18 @@ NOISE_WORDS_ADDRESS_REPLACE = {
             r'\bHWY\b': 'HIGHWAY'
         }
 
+# ==============================================================================
+# DISTANCE CALCULATION CONFIGURATIONS
+# ==============================================================================
+
+# Default distance measures showed in the output table for the supervised matches
 DEFAULT_DISTANCES: list[Distance] = [
     Distance('OUTLET_NAME', DistanceMethod.COSINE, 'outlet_name_cosine'),
     Distance('ADDRESS', DistanceMethod.COSINE, 'address_cosine'),
     Distance('POSTCODE', DistanceMethod.EXACT, 'postcode'),
 ]
 
+# Set of all distance measures
 DISTANCES: list[Distance] = DEFAULT_DISTANCES + [
     Distance('OUTLET_NAME', DistanceMethod.JAROWINKLER, 'outlet_name_jarowinkler'),
     Distance('OUTLET_NAME', DistanceMethod.LEVENSHTEIN, 'outlet_name_levenshtein'),
@@ -70,11 +99,18 @@ DISTANCES: list[Distance] = DEFAULT_DISTANCES + [
     Distance('POSTCODE', DistanceMethod.JAROWINKLER, 'postcode_jaro'),
 ]
 
+# Set of all valid distance measure labels for validation
 DISTANCE_LABELS: frozenset[str] = frozenset(
     d.label for d in DISTANCES
 )
 
+
 class DistanceFilter(BaseModel):
+    """Filter configuration for outlet matching based on distance thresholds.
+    
+    Attributes:
+        value: Dictionary mapping distance measure labels to minimum threshold values (0.0-1.0)
+    """
     value: Dict[str, float]
 
     model_config = {
@@ -98,14 +134,27 @@ class DistanceFilter(BaseModel):
                 )
         return v
 
-## Identical
+
+# ==============================================================================
+# FILTER DEFINITIONS FOR AUTOMATIC MATCHING
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# EXACT MATCH FILTERS - Both fields must match exactly
+# ------------------------------------------------------------------------------
+
+# Identical outlet name and address
 filter_eq_outletname_eq_address = {
     "outlet_name": 0.5,  
     "address": 0.5,
     "postcode": 0
 }
 
-## Outlet name identical, Address similar
+# ------------------------------------------------------------------------------
+# EXACT OUTLET NAME + SIMILAR ADDRESS FILTERS
+# ------------------------------------------------------------------------------
+
+# Outlet name identical, address similar (various distance methods)
 filter_eq_outletname_address_cosine = {
     "outlet_name": 0.5,
     "address_cosine": 0.70,
@@ -122,7 +171,7 @@ filter_eq_outletname_address_qgram = {
     "postcode": 0
 }
 
-## Outlet name identical, Address CLEAN similar
+# Outlet name identical, cleaned address similar (various distance methods)
 filter_eq_outletname_addressclean_cosine = {
     "outlet_name": 0.5, 
     "address_clean_cosine": 0.70,
@@ -139,7 +188,11 @@ filter_eq_outletname_addressclean_qgram = {
     "postcode": 0
 }
 
-## Address identical, Outlet name similar
+# ------------------------------------------------------------------------------
+# EXACT ADDRESS + SIMILAR OUTLET NAME FILTERS
+# ------------------------------------------------------------------------------
+
+# Address identical, outlet name similar (various distance methods)
 filter_eq_address_outletname_cosine = {
     "outlet_name_cosine": 0.70,
     "address": 0.5,
@@ -156,7 +209,7 @@ filter_eq_address_outletname_qgram = {
     "postcode": 0
 }
 
-## Address identical, Outlet name CLEAN similar
+# Address identical, cleaned outlet name similar (various distance methods)
 filter_eq_address_outletnameclean_cosine = {
     "outlet_name_clean_cosine": 0.70, #0.8,
     "address": 0.5,
@@ -173,7 +226,11 @@ filter_eq_address_outletnameclean_qgram = {
     "postcode": 0  
 }
 
-## Address identical, Outlet Name (CLEAN) shared
+# ------------------------------------------------------------------------------
+# EXACT ADDRESS + SUBSTRING OUTLET NAME FILTERS
+# ------------------------------------------------------------------------------
+
+# Address identical, outlet name substring match
 filter_eq_address_eq_outletnamein = {
     "outlet_name_in": 0.50,
     "address": 0.50,
@@ -185,7 +242,11 @@ filter_eq_addressclean_eq_outletnamecleanin = {
     "postcode": 0
 }
 
-## Outlet Name identical, Address (CLEAN) shared
+# ------------------------------------------------------------------------------
+# EXACT OUTLET NAME + SUBSTRING ADDRESS FILTERS
+# ------------------------------------------------------------------------------
+
+# Outlet name identical, address substring match
 filter_eq_outletname_eq_addressin = {
     "outlet_name": 0.50,
     "address_in": 0.50,
@@ -197,7 +258,11 @@ filter_eq_outletnameclean_eq_addresscleanin = {
     "postcode": 0
 }
 
-## Outlet Name shared, Address (CLEAN) shared
+# ------------------------------------------------------------------------------
+# SUBSTRING MATCH FILTERS - Both fields use substring matching
+# ------------------------------------------------------------------------------
+
+# Both outlet name and address use substring matching
 filter_eq_outletnamein_eq_addresscleanin = {
     "outlet_name_in": 0.50,
     "address_clean_in": 0.50,
@@ -209,7 +274,7 @@ filter_eq_outletnamein_eq_addressin = {
     "postcode": 0
 }
 
-## Outlet Name (CLEAN) shared, Address (CLEAN) shared (2)
+# Both cleaned outlet name and address use word-level matching
 filter_eq_outletnamein2_eq_addressin2 = {
     "outlet_name_in2": 0.50,
     "address_in2": 0.50,
@@ -221,56 +286,71 @@ filter_eq_outletnamecleanin2_eq_addresscleanin2 = {
     "postcode": 0
 }
 
-## Both similar
-# - CLEAN cosine
+# ------------------------------------------------------------------------------
+# SIMILARITY-BASED FILTERS - Both fields use similarity measures
+# ------------------------------------------------------------------------------
+
+# Both cleaned outlet name and address use cosine similarity
 filter_outlet_nameclean_cosine_addressclean_cosine = {
     "outlet_name_clean_cosine": 0.85,
     "address_clean_cosine": 0.85,
     "postcode": 0
-} 
-# - CLEAN levenshtein
+}
+
+# Both cleaned outlet name and address use Levenshtein distance
 filter_outlet_nameclean_levenshtein_addressclean_levenshtein = {
     "outlet_name_clean_levenshtein": 0.80,
     "address_clean_levenshtein": 0.80,
     "postcode": 0
 }
-# - CLEAN jarowinkler
+
+# Both cleaned outlet name and address use Jaro-Winkler distance
 filter_outlet_nameclean_jarowinkler_addressclean_jarowinkler = {
     "outlet_name_clean_jarowinkler":  0.80,
     "address_clean_jarowinkler": 0.80,
     "postcode": 0
 }
-# - CLEAN qgram
+
+# Both cleaned outlet name and address use Q-gram distance
 filter_outlet_nameclean_qgram_addressclean_qgram = {
     "outlet_name_clean_qgram": 0.65,
     "address_clean_qgram": 0.65,
     "postcode": 0 
 }
-# - Original cosine
+
+# Both original outlet name and address use cosine similarity
 filter_outletname_cosine_address_cosine = {
     "outlet_name_cosine": 0.80,
     "address_cosine": 0.80,
     "postcode": 0
 }
-# - Original levenshtein
+
+# Both original outlet name and address use Levenshtein distance
 filter_outletname_levenshtein_address_levenshtein = {
     "outlet_name_levenshtein": 0.80,
     "address_levenshtein": 0.80,
     "postcode": 0
 }
-# - Original jarowinkler
+
+# Both original outlet name and address use Jaro-Winkler distance
 filter_outletname_jarowinkler_address_jarowinkler = {
     "outlet_name_jarowinkler": 0.80,
     "address_jarowinkler": 0.80,
     "postcode": 0
 }
-# - Original qgram
+
+# Both original outlet name and address use Q-gram distance
 filter_outletname_qgram_address_qgram = {
     "outlet_name_qgram": 0.65,
     "address_qgram": 0.65,
     "postcode": 0
 }
-# - Mixed CLEAN and Original
+
+# ------------------------------------------------------------------------------
+# MIXED CLEAN/ORIGINAL SIMILARITY FILTERS
+# ------------------------------------------------------------------------------
+
+# Original outlet name + cleaned address (cosine)
 filter_outletname_cosine_addressclean_cosine = {
     "outlet_name_cosine": 0.80,
     "address_clean_cosine": 0.80,
@@ -312,6 +392,9 @@ filter_outletnameclean_qgram_address_qgram = {
     "postcode": 0
 }
 
+# ------------------------------------------------------------------------------
+# HYBRID FILTERS - Combined distance methods with postcode
+# ------------------------------------------------------------------------------
 
 filter_outletnameclean_jaro_addressclean_levenshtein = {
     "outlet_name_clean_jarowinkler": 0.65,
@@ -334,7 +417,10 @@ filter_outletnameclean_jaro_addressclean_jaro = {
     "postcode_jaro": 0.8,
 }
 
-## Univariate
+# ------------------------------------------------------------------------------
+# UNIVARIATE FILTERS - Focus on single field matching
+# ------------------------------------------------------------------------------
+
 filter_eq_outletname = {
     "outlet_name": 0.5,
     "address_cosine": 0,
@@ -386,6 +472,12 @@ filter_addressclean_levenshtein2 = {
     "postcode_jaro": 0.8,
 }
 
+# ==============================================================================
+# COMPLETE FILTER COLLECTION
+# ==============================================================================
+
+# Comprehensive list of all automatic matching filters
+# Used by the matching engine to find potential outlet matches
 FILTERS_AUTO= [
     DistanceFilter(value=filter_eq_outletname_eq_address),
     DistanceFilter(value=filter_eq_outletname_addressclean_cosine),   

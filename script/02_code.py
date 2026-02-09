@@ -108,7 +108,7 @@ df_inner = (df_input_clean
 
 from svoc.rl import get_matches_with_clusters
 
-with open(".data/postcode.json", "r") as f:
+with open("./data/postcode.json", "r") as f:
     groups = json.load(f)
 
 all_matches, features, remaining_features = get_matches_with_clusters(
@@ -118,9 +118,11 @@ all_matches, features, remaining_features = get_matches_with_clusters(
     filters=FILTERS_AUTO,
     block_col=settings.BLOCK_COL,
     groups=groups,
-    n_matches=settings.N_MATCHES, verbose=False,
-    models_path_dict=settings.SUPERVISED_MODELS_PATHS
+    n_matches=settings.N_MATCHES,
+    models_path_dict=settings.SUPERVISED_MODELS_PATHS,
+    verbose=False
     )
+
 
 cfr = (all_matches #[['ID_1','ID_2', 'rank']]
  .merge(all_matches_old[['ID_1','ID_2', 'rank']], 
