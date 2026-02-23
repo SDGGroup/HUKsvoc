@@ -55,10 +55,15 @@ def initialize_compare_cl(
             and element.method!=DistanceMethod.SUBSTRING
             and element.method!=DistanceMethod.WORDSMATCH
         ):
-            compare_cl.string(element.col_name, element.col_name, label=element.label,
-                              method=element.method, missing_value=0)
+            compare_cl.string(
+                left_on = element.col_name_x, right_on = element.col_name_y, 
+                label=element.label, method=element.method, missing_value=0
+                )
         elif element.method == DistanceMethod.EXACT:
-            compare_cl.exact(element.col_name, element.col_name, label=element.label, missing_value=0)
+            compare_cl.exact(
+                left_on = element.col_name_x, right_on = element.col_name_y, 
+                label=element.label, missing_value=0
+                )
         else:
             pass  # Substring and Wordsmatch are handled separately
             
@@ -297,14 +302,14 @@ def manual_features(
     for element in l_compare:
         if element.method == DistanceMethod.SUBSTRING:
             features[element.label] = vec_substring_matching(
-                                   column_x=features[f'{element.col_name}_x'],
-                                   column_y=features[f'{element.col_name}_y']
+                                   column_x=features[f'{element.col_name_x}_x'],
+                                   column_y=features[f'{element.col_name_y}_y']
                                    )
             new_cols.append(element.label)
         elif element.method == DistanceMethod.WORDSMATCH:
             features[element.label] = vec_word_subset(
-                                   column_x=features[f'{element.col_name}_x'],
-                                   column_y=features[f'{element.col_name}_y']
+                                   column_x=features[f'{element.col_name_x}_x'],
+                                   column_y=features[f'{element.col_name_y}_y']
                                    )
             new_cols.append(element.label)
         else:

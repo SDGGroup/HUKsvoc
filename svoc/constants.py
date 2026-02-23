@@ -97,6 +97,12 @@ DISTANCES: list[Distance] = DEFAULT_DISTANCES + [
     Distance('ADDRESS', DistanceMethod.WORDSMATCH, 'address_in2'),
     Distance('ADDRESS_CLEAN', DistanceMethod.WORDSMATCH, 'address_clean_in2'),
     Distance('POSTCODE', DistanceMethod.JAROWINKLER, 'postcode_jaro'),
+    Distance(col_name_x='ADDRESS_CLEAN', col_name_y='OUTLET_NAME_CLEAN', method=DistanceMethod.COSINE, label='name_address_cosine'),
+    Distance(col_name_x='ADDRESS_CLEAN', col_name_y='OUTLET_NAME_CLEAN', method=DistanceMethod.JAROWINKLER, label='name_address_jarowinkler'),
+    Distance(col_name_x='ADDRESS_CLEAN', col_name_y='OUTLET_NAME_CLEAN', method=DistanceMethod.WORDSMATCH, label='name_address_in2'),
+    Distance(col_name_x='OUTLET_NAME_CLEAN', col_name_y='ADDRESS_CLEAN', method=DistanceMethod.COSINE, label='address_name_cosine'),
+    Distance(col_name_x='OUTLET_NAME_CLEAN', col_name_y='ADDRESS_CLEAN', method=DistanceMethod.JAROWINKLER, label='address_name_jarowinkler'),
+    Distance(col_name_x='OUTLET_NAME_CLEAN', col_name_y='ADDRESS_CLEAN', method=DistanceMethod.WORDSMATCH, label='address_name_in2'),
 ]
 
 # Set of all valid distance measure labels for validation
@@ -350,7 +356,7 @@ filter_outletname_qgram_address_qgram = {
 # MIXED CLEAN/ORIGINAL SIMILARITY FILTERS
 # ------------------------------------------------------------------------------
 
-# Original outlet name + cleaned address (cosine)
+# Original outlet name + cleaned address
 filter_outletname_cosine_addressclean_cosine = {
     "outlet_name_cosine": 0.80,
     "address_clean_cosine": 0.80,
@@ -529,5 +535,11 @@ FILTERS_AUTO= [
     DistanceFilter(value=filter_addressclean_cosine),
     DistanceFilter(value=filter_addressclean_levenshtein),
     DistanceFilter(value=filter_addressclean_jarowinkler),
-    DistanceFilter(value=filter_addressclean_levenshtein2)
+    DistanceFilter(value=filter_addressclean_levenshtein2),
+    DistanceFilter(value={"outlet_name_cosine":0, "address_cosine":0,"name_address_in2": 0.50, "postcode": 0}),
+    DistanceFilter(value={"outlet_name_cosine":0, "address_cosine":0,"address_name_in2": 0.50, "postcode": 0}),
+    DistanceFilter(value={"outlet_name_cosine":0, "address_cosine":0,"name_address_cosine": 0.70, "postcode": 0}),
+    DistanceFilter(value={"outlet_name_cosine":0, "address_cosine":0,"address_name_cosine": 0.70, "postcode": 0}),
+    DistanceFilter(value={"outlet_name_cosine":0, "address_cosine":0,"name_address_jarowinkler": 0.70, "postcode": 0}),
+    DistanceFilter(value={"outlet_name_cosine":0, "address_cosine":0,"address_name_jarowinkler": 0.70, "postcode": 0}),
 ]
