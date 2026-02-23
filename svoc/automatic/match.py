@@ -51,7 +51,7 @@ def filter_dataframe(
         )
     for column_name, threshold in dict_constraints.value.items():
         if column_name in df.columns:
-            df = df[df[column_name] > threshold].copy()
+            df = df[df[column_name] >= threshold].copy()
         else:
             print(f"Warning: Column '{column_name}' not found in DataFrame.")
     return df
