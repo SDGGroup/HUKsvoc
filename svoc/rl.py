@@ -168,7 +168,7 @@ def get_matches_with_clusters(
         models_path_dict: Dictionary mapping SupervisedModel to model file paths. Default: None
         
     Returns:
-        tuple containing:
+        tuple:
         - all_matches: DataFrame of top-N matched pairs with scores, ranks, and metadata
         - all_features: DataFrame of all computed features for candidate pairs
         - remaining_features: DataFrame of unmatched candidate pairs
@@ -195,9 +195,11 @@ def get_matches_with_clusters(
         df_x_filtered = df_benchmark[df_benchmark[block_col].isin([pc])]#.drop_duplicates()
         df_y_filtered = df_input[df_input[block_col].isin(neighbors)]#.drop_duplicates()
         
-        if df_x_filtered.empty or df_y_filtered.empty:
+        if (df_x_filtered.empty or df_y_filtered.empty):
+            if verbose:
+                print(f"⚠️ Skipping postcode {pc} due to empty benchmark or input group.")
             continue # skip empty groups
-
+            
         features = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, njobs=1)
         matches_auto, remaining_features = find_automatic_matches(filters, features, n=n_matches, verbose=verbose)
         matches_supervised, remaining_features = find_supervised_matches(
@@ -311,7 +313,15 @@ def prepare_output(
         )
     
     out = pd.DataFrame()
-    LABEL_TO_COL = {d.label: d.col_name for d in distances}
+    # LABEL_TO_COL = {d.label: d.col_name_x for d in distances}
+    
+    LABEL_TO_COL = {
+        d.label: d.col_name_x+"_"+d.col_name_y 
+        if d.col_name_x != d.col_name_y 
+        else d.col_name_x 
+        for d in distances
+        }
+
     LABEL_TO_DIST = {d.label: d.method.value for d in distances}
     to_keep = ['ID_1','ID_2','ID_filter','rank','score','match_type','model']
     for idx, f in enumerate(filters):
@@ -330,7 +340,7 @@ def prepare_output(
         
         out = pd.concat([out, aux], axis=0, ignore_index=True)
 
-    LABEL_TO_COL = {d.label: d.col_name for d in DEFAULT_DISTANCES}
+    LABEL_TO_COL = {d.label: d.col_name_x for d in DEFAULT_DISTANCES}
     LABEL_TO_DIST = {d.label: d.method.value for d in DEFAULT_DISTANCES}
     
     columns_method = [c+'_method' for c in list(LABEL_TO_COL.values())]
@@ -338,7 +348,7 @@ def prepare_output(
         matches['ID_filter'].isna(), 
         to_keep+list(LABEL_TO_COL.keys())
         ]
-        .rename(columns={d.label: d.col_name+'_score' for d in DEFAULT_DISTANCES})
+        .rename(columns={d.label: d.col_name_x+'_score' for d in DEFAULT_DISTANCES})
         .copy())
     aux.loc[:, columns_method]=list(LABEL_TO_DIST.values())
 
