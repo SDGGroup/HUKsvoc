@@ -13,6 +13,7 @@ import numpy as np
 from svoc.constants import DISTANCES, FILTERS_AUTO
 
 
+
 settings = get_settings()
 # settings = get_settings("./config/dev2.yaml")
 
@@ -35,6 +36,7 @@ df_input, df_benchmark = read_data_from_csv(settings)
 # Prendo tutte le coppie di postalcode e misuro le differenze. Se la differenza è piccola considero il postal code uguale
 # prova a usare index.sortedneighbourhood()
 # https://recordlinkage.readthedocs.io/en/latest/ref-index.html#recordlinkage.index.SortedNeighbourhood
+
 
 
 def prepare_table(
@@ -111,6 +113,7 @@ from svoc.rl import get_matches_with_clusters
 with open("./data/postcode.json", "r") as f:
     groups = json.load(f)
 
+
 all_matches, features, remaining_features = get_matches_with_clusters(
     df_input=df_input_clean, 
     df_benchmark=df_benchmark_clean, 
@@ -123,6 +126,14 @@ all_matches, features, remaining_features = get_matches_with_clusters(
     verbose=False
     )
 
+output = prepare_output(
+    matches=all_matches,
+    distances=DISTANCES,
+    filters=FILTERS_AUTO
+)
+
+output.to_csv("./data/output.csv", index=False)
+output.to_excel("./data/output.xlsx", index=False)
 
 cfr = (all_matches #[['ID_1','ID_2', 'rank']]
  .merge(all_matches_old[['ID_1','ID_2', 'rank']], 
@@ -191,8 +202,8 @@ missing_matches = (make_upper_str(df_benchmark)
 ).query("_merge == 'left_only'") \
  .drop(columns="_merge")
 
-output.to_excel("./data/output_1.xlsx", index=False)
-
+output.to_excel("./data/output_new.xlsx", index=False)
+output.to_csv("./data/output_new.csv", index=False)
 #----------------------------------------------------------
 ## Automatic Matching
 all_matches_auto, features, remaining_features = get_automatic_matches(
@@ -260,7 +271,7 @@ f = 1
 output[output["ID_filter"]==f]
 df_match_final[df_match_final["ID_filter"]==f][["OUTLET_NAME_input", "OUTLET_NAME_benchmark","rank","score"]]
 
-# df_match_final.to_excel("./data/match_final1.xlsx", index=False)
+df_match_final.to_excel("./data/output_matches.xlsx", index=False)
 # from svoc.utils import save_pickle
 # save_pickle(df_match_final, "./data/match_final.pkl")
 

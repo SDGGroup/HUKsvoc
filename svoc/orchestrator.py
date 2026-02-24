@@ -270,5 +270,6 @@ def svoc_record_linkage(
     
     if save:
         output.to_csv(settings.DATA_DIR / 'output.csv', index=False)    
-    
+        print(f"Output saved to {settings.DATA_DIR / 'output.csv'}")
+        
     return output

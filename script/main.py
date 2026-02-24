@@ -42,6 +42,7 @@ def svoc_pipeline(
     )
 
     logger.info("Record linkage completed (%d matched rows)", len(output))
+    
     return output
     
 
@@ -51,7 +52,7 @@ def main():
     logger.info("Settings loaded")
     output = svoc_pipeline(settings=settings)
     logger.info("SVOC pipeline finished successfully")
-   # return output
+    return output
 
 if __name__ == "__main__":
     try:

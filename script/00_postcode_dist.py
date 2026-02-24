@@ -5,7 +5,6 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 
 
-k = 6
 settings = get_settings()
 
 df_input, df_benchmark = read_data_from_csv(settings)
@@ -48,10 +47,23 @@ pc_input[['LAT','LONG']] = np.radians(
 
 ## Neighbors
 
+## Trova K vicini
+k = 6
 nn = NearestNeighbors(
     n_neighbors=k,
     metric="haversine"
 )
+## Trova vicini entro tot KM
+def km_to_radians(km):
+    return km / 6371.0
+
+km = 5
+nn = NearestNeighbors(
+    radius=km_to_radians(km),  
+    metric="haversine"
+)
+
+
 nn.fit(pc_input[['LAT','LONG']])
 distances, indices = nn.kneighbors(pc_bench[['LAT','LONG']])
 
@@ -61,6 +73,17 @@ for i, cap in enumerate(pc_bench["POSTCODE"]):
     neighbors = list(dict.fromkeys(neighbors))
     groups[cap] = neighbors
 
+
+# groups['W72DT']
+# pc_bench[pc_bench["POSTCODE"]=='W72DT']
+
+# b=make_upper_str(df=df_benchmark)
+# b=remove_accents_and_regex(
+#     df=b, 
+#     re_pattern=r'[^a-zA-Z0-9]', 
+#     l_cols_not_to_apply=['OutletName','LAT','LONG']
+#     )
+# b[b["OutletPostcode"]=='W1U5JZ']
 
 # Alcuni Postalcode non hanno vicini ad esempio perchè non hanno coordinate
 # - Prendo i postalcode mancanti dalle chiavi
@@ -89,5 +112,5 @@ for xpc in x:
 # result = pd.DataFrame(rows).drop_duplicates()
 
 import json
-with open("./data/postcode.json", "w") as f:
+with open("./data/postcode_new.json", "w") as f:
     json.dump(groups, f, indent=2)
