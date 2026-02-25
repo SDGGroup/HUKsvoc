@@ -76,6 +76,7 @@ def rl_compare_block(
         compare_cl: Compare, 
         block_variable: str | None = None,
         window: int = 1,
+        candidate_links: pd.Index | None = None,
     ) -> pd.DataFrame:
     """Generate candidate pairs and compute features using blocking strategy.
     
@@ -87,6 +88,7 @@ def rl_compare_block(
     - block_variable=None: Full indexing (all possible pairs) - expensive!
     - window=1: Standard blocking on exact block_variable values
     - window>1: Sorted neighbourhood blocking (compares nearby sorted values)
+    - candidate_links: If provided, uses these pre-computed pairs instead of generation.
     
     Args:
         df_1: First DataFrame (typically benchmark data)
@@ -94,6 +96,7 @@ def rl_compare_block(
         compare_cl: Configured Compare object with distance methods
         block_variable: Column name to use for blocking. None = full index. Default: None
         window: Window size for sorted neighbourhood blocking. Default: 1
+        candidate_links: Pre-computed index of record pairs. Default: None
         
     Returns:
         DataFrame with computed features for each candidate pair.
@@ -120,7 +123,7 @@ def rl_compare_block(
         raise TypeError(
             f"compare_cl must be a recordlinkage Compare object, got {type(compare_cl).__name__}"
         )
-    if block_variable is not None:
+    if candidate_links is None and block_variable is not None:
         if block_variable not in df_1.columns:
             raise ValueError(
                 f"block_variable '{block_variable}' not found in df_1. Available columns: {list(df_1.columns)}"
@@ -130,19 +133,19 @@ def rl_compare_block(
                 f"block_variable '{block_variable}' not found in df_2. Available columns: {list(df_2.columns)}"
             )
 
-    indexer = Index()
-    
-    if block_variable is not None:
-        if window > 1:
-            indexer.sortedneighbourhood(block_variable, window=window)
+    if candidate_links is None:
+        indexer = Index()
+        if block_variable is not None:
+            if window > 1:
+                indexer.sortedneighbourhood(block_variable, window=window)
+            else:
+                indexer.block(block_variable)
         else:
-            indexer.block(block_variable)
-    else:
-        rl_logger = logging.getLogger("recordlinkage")
-        rl_logger.setLevel(logging.ERROR)
-        indexer.full()
+            rl_logger = logging.getLogger("recordlinkage")
+            rl_logger.setLevel(logging.ERROR)
+            indexer.full()
+        candidate_links = indexer.index(df_1, df_2) 
     
-    candidate_links = indexer.index(df_1, df_2) 
     features = compare_cl.compute(candidate_links, df_1, df_2)
     features = features.fillna(0.0)
     return features
@@ -325,12 +328,13 @@ def get_features(
         block_col: str | None = None,
         window: int = 1,
         njobs: int = -1,
+        candidate_links: pd.Index | None = None,
     ) -> pd.DataFrame:
     """Main feature computation pipeline for record pair comparison.
     
     Complete pipeline that:
     1. Initializes Compare object with specified distance methods
-    2. Generates candidate pairs using blocking strategy
+    2. Generates candidate pairs using blocking strategy (or uses provided index)
     3. Computes standard features (cosine, Levenshtein, etc.)
     4. Adds custom features (substring, word matching)
     
@@ -344,6 +348,7 @@ def get_features(
         block_col: Column name for blocking. None = full index (all pairs). Default: None
         window: Window size for sorted neighbourhood blocking. Default: 1
         njobs: Number of parallel jobs (-1 = all CPUs). Default: -1
+        candidate_links: Optional pre-computed index of record pairs. Default: None
         
     Returns:
         DataFrame with computed features for each candidate pair.
@@ -378,6 +383,6 @@ def get_features(
         )
     
     compare_cl = initialize_compare_cl(distances, n_jobs_param=njobs)
-    features = rl_compare_block(df_x, df_y, compare_cl, block_col, window)
+    features = rl_compare_block(df_x, df_y, compare_cl, block_col, window, candidate_links=candidate_links)
     features = manual_features(distances, features, df_x, df_y, index_x="ID_1", index_y="ID_2")
     return features

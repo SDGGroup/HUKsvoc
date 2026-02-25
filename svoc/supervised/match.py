@@ -304,17 +304,34 @@ def train_all_models(
             window=window
             )
     else:
-        training_features = []
-        for pc, neighbors in tqdm(groups.items()):
-            df_x_filtered = df_benchmark_clean[df_benchmark_clean[block_col].isin([pc])]#.drop_duplicates()
-            df_y_filtered = df_input_clean[df_input_clean[block_col].isin(neighbors)]#.drop_duplicates()
+        # Vectorized pair generation for clustering
+        bench_groups = df_benchmark_clean.groupby(block_col).groups
+        input_groups = df_input_clean.groupby(block_col).groups
+        
+        candidate_indices_l = []
+        for pc, neighbors in groups.items():
+            if pc not in bench_groups:
+                continue
             
-            if df_x_filtered.empty or df_y_filtered.empty:
-                continue # skip empty groups
-
-            feats = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, njobs=1)
-            training_features.append(feats)
-        training_features = concat_l(training_features)
+            bench_ids = bench_groups[pc]
+            input_ids = []
+            for neighbor in neighbors:
+                if neighbor in input_groups:
+                    input_ids.extend(input_groups[neighbor])
+            
+            if not input_ids:
+                continue
+            
+            candidate_indices_l.append(pd.MultiIndex.from_product([bench_ids, input_ids]))
+            
+        if not candidate_indices_l:
+            raise ValueError("No candidate pairs generated from clusters for training.")
+             
+        candidate_links = candidate_indices_l[0].append(candidate_indices_l[1:])
+        candidate_links.names = ['ID_1', 'ID_2']
+        candidate_links = candidate_links.drop_duplicates()
+        
+        training_features = get_features(distances, df_x=df_benchmark_clean, df_y=df_input_clean, candidate_links=candidate_links)
 
 
     training_features = (training_features[training_features["ID_1"].isin(matched_indexes)]

@@ -183,37 +183,60 @@ def get_matches_with_clusters(
     if groups is None:
         raise ValueError("groups parameter must be provided for clustering-based matching.")
 
-    l_all_matches = []
-    l_features = []
-    l_remaining_features = []
-
-    for pc, neighbors in tqdm(groups.items()):
-        
-        if verbose:
-            print(f"{pc}: {neighbors}")       
-        
-        df_x_filtered = df_benchmark[df_benchmark[block_col].isin([pc])]#.drop_duplicates()
-        df_y_filtered = df_input[df_input[block_col].isin(neighbors)]#.drop_duplicates()
-        
-        if (df_x_filtered.empty or df_y_filtered.empty):
-            if verbose:
-                print(f"⚠️ Skipping postcode {pc} due to empty benchmark or input group.")
-            continue # skip empty groups
+    if verbose:
+        print("Generating candidate pairs from clusters...")
+    
+    # Pre-group by block_col once for fast lookup
+    bench_groups = df_benchmark.groupby(block_col).groups
+    input_groups = df_input.groupby(block_col).groups
+    
+    candidate_indices_l = []
+    for pc, neighbors in groups.items():
+        if pc not in bench_groups:
+            continue
             
-        features = get_features(distances, df_x=df_x_filtered, df_y=df_y_filtered, njobs=1)
-        matches_auto, remaining_features = find_automatic_matches(filters, features, n=n_matches, verbose=verbose)
-        matches_supervised, remaining_features = find_supervised_matches(
-            remaining_features, 
-            models_path_dict=models_path_dict
-            )
+        bench_ids = bench_groups[pc]
+        # Collect all input IDs for all neighbors in the neighborhood
+        input_ids = []
+        for neighbor in neighbors:
+            if neighbor in input_groups:
+                input_ids.extend(input_groups[neighbor])
         
-        l_all_matches.append(matches_auto)
-        l_all_matches.append(matches_supervised)
-        l_features.append(features)
-        l_remaining_features.append(remaining_features)
+        if not input_ids:
+            continue
+            
+        # Create a partial MultiIndex for this neighborhood
+        candidate_indices_l.append(pd.MultiIndex.from_product([bench_ids, input_ids]))
 
-    if not l_all_matches:
+    if not candidate_indices_l:
+        if verbose:
+            print("⚠️ No candidate matches found in specified clusters")
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    # Combine all neighbor-based candidate pairs into a single index
+    candidate_links = candidate_indices_l[0].append(candidate_indices_l[1:])
+    candidate_links.names = ['ID_1', 'ID_2']
+    
+    # Remove duplicates if any (neighborhoods might overlap)
+    candidate_links = candidate_links.drop_duplicates()
+
+    if verbose:
+        print(f"Computing features for {len(candidate_links)} candidate pairs...")
+        
+    # Execute full pipeline in one go
+    features = get_features(distances, df_x=df_benchmark, df_y=df_input, candidate_links=candidate_links)
+    
+    matches_auto, remaining_features = find_automatic_matches(filters, features, n=n_matches, verbose=verbose)
+    matches_supervised, remaining_features = find_supervised_matches(
+        remaining_features, 
+        models_path_dict=models_path_dict
+        )
+    
+    l_all_matches = [matches_auto, matches_supervised]
+
+    if all([df.empty for df in l_all_matches]):
         print("⚠️ No matches found")
+        all_matches = pd.DataFrame()
     else:
         all_matches = (
             concat_l(l_all_matches)
@@ -222,7 +245,8 @@ def get_matches_with_clusters(
         )
         all_matches = all_matches[all_matches['rank'] <= n_matches]
 
-        print(
+        if verbose:
+            print(
 f"""""
 Total benchmark IDs: {df_benchmark.shape[0]}
 Matched benchmark IDs: {all_matches[['ID_1']].drop_duplicates().shape[0]}
@@ -230,8 +254,7 @@ Un-matched benchmark IDs: {df_benchmark[~df_benchmark.index.isin(all_matches['ID
 """""
 )
 
-
-    return all_matches, concat_l(l_features), concat_l(l_remaining_features)
+    return all_matches, features, remaining_features
 
 
 def prepare_output( 
