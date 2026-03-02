@@ -64,11 +64,19 @@ cd HUKsvoc
 ```bash
 pip install -r requirements.txt
 ```
-3. Install the package in development mode:
+3. Install the package:
+
+```bash
+pip install dist/*.whl
+```
+
+For development mode:
 
 ```bash
 pip install -e .
 ```
+
+
 ### Configuration
 
 Edit the YAML configuration file in the [config](/config/) directory *or* the [.env](.env) file, to specify:

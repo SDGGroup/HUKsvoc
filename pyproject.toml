@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Beavertown Single View of Customer"
 requires-python = ">=3.12"
 license = {text = "MIT"}
+authors = [{name = "Sveva Salvi Bentivoglio", email = "sveva.salvibentivoglio@sdggroup.com"}]
 
 dynamic = ["dependencies"]
 
@@ -23,4 +24,5 @@ dependencies = {file = ["requirements.txt"]}
 "" = "."
 
 [project.urls]
-Homepage = "https://github.com/SDGGroup/HUKsvoc"
+"Homepage" = "https://github.com/SDGGroup/HUKsvoc"
+
