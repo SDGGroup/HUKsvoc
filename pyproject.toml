@@ -10,15 +10,15 @@ requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [{name = "Sveva Salvi Bentivoglio", email = "sveva.salvibentivoglio@sdggroup.com"}]
 
-dynamic = ["dependencies"]
+# dynamic = ["dependencies"]
 
 # Questo serve a trovare automaticamente la tua cartella
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["svoc*"]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+# [tool.setuptools.dynamic]
+# dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.package-dir]
 "" = "."
