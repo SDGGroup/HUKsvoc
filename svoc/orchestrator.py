@@ -15,17 +15,18 @@ import json
 from sklearn.neighbors import NearestNeighbors
 
 from svoc.settings import Settings
-from svoc.datapreparation import prepare_data, rename_and_select_cols, make_upper_str, remove_accents_and_regex
+from svoc.datapreparation import check_duplicates, prepare_data, rename_and_select_cols, make_upper_str, remove_accents_and_regex
 from svoc.rl import get_matches_with_clusters, prepare_output
 from svoc.constants import DISTANCES, FILTERS_AUTO
-
+from logging import Logger
 
 def svoc_knn(
         settings: Settings, 
         df_input: pd.DataFrame, 
         df_benchmark: pd.DataFrame, 
         k: int = 6,
-        save: bool = True
+        save: bool = True,
+        logger: Logger | None = None
         ) -> dict[str, list[str]]:
     """Create geographic neighborhood groups using k-nearest neighbors.
     
@@ -91,7 +92,8 @@ def svoc_knn(
         raise KeyError("Missing required keys: both 'LATITUDE' and 'LONGITUDE' columns must be specified in the settings.")
     
     def prepare_data_for_knn(df: pd.DataFrame, cols: dict):
-        df_out = rename_and_select_cols(df=df, dict_cols={k: cols[k] for k in [settings.BLOCK_COL, LATITUDE, LONGITUDE]})
+        df_out=check_duplicates(df=df, logger=logger)
+        df_out = rename_and_select_cols(df=df_out, dict_cols={k: cols[k] for k in [settings.BLOCK_COL, LATITUDE, LONGITUDE]})
         df_out = make_upper_str(df=df_out)
         df_out = remove_accents_and_regex(
             df=df_out, 
@@ -153,13 +155,13 @@ def svoc_knn(
 
     return groups
 
-
 def svoc_record_linkage(
         settings: Settings, 
         df_input: pd.DataFrame, 
         df_benchmark: pd.DataFrame, 
         groups: dict | None = None,
-        save: bool = False
+        save: bool = False,
+        logger: Logger | None = None
         ) -> pd.DataFrame:
     """Execute complete record linkage pipeline for outlet matching.
     
@@ -244,11 +246,13 @@ def svoc_record_linkage(
     df_benchmark_clean = prepare_data(
         df=df_benchmark, 
         dict_cols=settings.BENCHMARK_CORE_COLUMNS_DICT,
+        logger=logger
         )
 
     df_input_clean = prepare_data(
         df=df_input, 
         dict_cols=settings.INPUT_CORE_COLUMNS_DICT,
+        logger=logger
         )
 
     all_matches, features, remaining_features = get_matches_with_clusters(
@@ -259,7 +263,8 @@ def svoc_record_linkage(
         block_col=settings.BLOCK_COL,
         groups=groups,
         n_matches=settings.N_MATCHES, verbose=False,
-        models_path_dict=settings.SUPERVISED_MODELS_PATHS
+        models_path_dict=settings.SUPERVISED_MODELS_PATHS,
+        logger=logger
         )
 
     output = prepare_output(
@@ -270,6 +275,7 @@ def svoc_record_linkage(
     
     if save:
         output.to_csv(settings.DATA_DIR / 'output.csv', index=False)    
-        print(f"Output saved to {settings.DATA_DIR / 'output.csv'}")
+        if logger:
+            logger.info(f"Output saved to {settings.DATA_DIR / 'output.csv'}")
         
     return output

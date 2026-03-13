@@ -15,6 +15,7 @@ import numpy as np
 import re
 from unidecode import unidecode
 from svoc.constants import NOISE_WORDS_OUTLETNAME, NOISE_WORDS_ADDRESS, NOISE_WORDS_ADDRESS_REPLACE
+from logging import Logger
 
 def rename_and_select_cols(
         df: pd.DataFrame, 
@@ -360,12 +361,56 @@ def clean_address_noise_words(
     out[name] = out[col].apply(process_row)
     return out
 
+def check_duplicates(df: pd.DataFrame, logger: Logger | None = None) -> pd.DataFrame:
+    """
+    Checks and removes duplicates from a pandas DataFrame.
+    
+    Identifies completely duplicate rows (all columns) and removes them,
+    keeping the first occurrence. If duplicates are found, issues a warning
+    via logger (if provided) or console print.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to check and clean from duplicates.
+    logger : Logger | None, default None
+        Optional logger for warnings. If None, uses print().
+        
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame without duplicates (modified copy).
+        
+    Notes
+    -----
+    - Uses `drop_duplicates(keep='first')` implicitly.
+    - Warnings show duplicate count and the duplicate rows found.
+    - Does not modify the original input DataFrame.
+        
+    Examples
+    --------
+    >>> df_clean = check_duplicates(df)
+    >>> df_clean = check_duplicates(df, logger=my_logger)
+    """
+    duplicates = df[df.duplicated(keep=False)]
+    if not duplicates.empty:
+        if logger:
+            logger.warning(f"Duplicates found in the data: {len(duplicates)} rows. The duplicated rows have been removed.")
+            # logger.warning(duplicates)
+        else:
+            print(f"Duplicates found in the data: {len(duplicates)} rows. The duplicated rows have been removed.")
+            # print(duplicates)
+    
+    return df.drop_duplicates()
+
+
 def prepare_data(
         df: pd.DataFrame, 
         dict_cols: dict[str, str], 
         rm_address_noise: bool = True, 
         parse_address: bool = False, 
-        get_town: bool = False
+        get_town: bool = False,
+        logger: Logger | None = None
     ) -> pd.DataFrame:
     """Main data preparation pipeline for outlet matching.
     
@@ -403,7 +448,8 @@ def prepare_data(
     if not isinstance(get_town, bool):
         raise TypeError(f"get_town must be a boolean, got {type(get_town).__name__}")
     
-    out=rename_and_select_cols(df=df, dict_cols=dict_cols)
+    out=check_duplicates(df=df, logger=logger)
+    out=rename_and_select_cols(df=out, dict_cols=dict_cols)
     out=make_upper_str(df=out)
 
     out = out[~out['OUTLET_NAME'].str.contains("DO NOT USE", case=False, na=False)]

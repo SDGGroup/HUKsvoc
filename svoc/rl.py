@@ -22,6 +22,7 @@ from svoc.automatic.models import Distance
 from svoc.supervised.enums import SupervisedModel
 from svoc.supervised.match import find_supervised_matches
 from svoc.constants import DEFAULT_DISTANCES, DistanceMethod
+from logging import Logger
 
 
 def get_matches_with_blocking(
@@ -137,6 +138,7 @@ def get_matches_with_clusters(
         n_matches: int = 3, 
         verbose: bool = True,
         models_path_dict: dict[SupervisedModel, Path] | None = None,
+        logger: Logger | None = None
         ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Execute complete matching pipeline using geographic clustering strategy.
     
@@ -183,8 +185,8 @@ def get_matches_with_clusters(
     if groups is None:
         raise ValueError("groups parameter must be provided for clustering-based matching.")
 
-    if verbose:
-        print("Generating candidate pairs from clusters...")
+    if verbose and logger is not None:
+        logger.info("Generating candidate pairs from clusters...")
     
     # Pre-group by block_col once for fast lookup
     bench_groups = df_benchmark.groupby(block_col).groups
@@ -209,8 +211,8 @@ def get_matches_with_clusters(
         candidate_indices_l.append(pd.MultiIndex.from_product([bench_ids, input_ids]))
 
     if not candidate_indices_l:
-        if verbose:
-            print("⚠️ No candidate matches found in specified clusters")
+        if verbose and logger is not None:
+            logger.warning("⚠️ No candidate matches found in specified clusters")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     # Combine all neighbor-based candidate pairs into a single index
@@ -220,8 +222,8 @@ def get_matches_with_clusters(
     # Remove duplicates if any (neighborhoods might overlap)
     candidate_links = candidate_links.drop_duplicates()
 
-    if verbose:
-        print(f"Computing features for {len(candidate_links)} candidate pairs...")
+    if verbose and logger is not None:
+        logger.info(f"Computing features for {len(candidate_links)} candidate pairs...")
         
     # Execute full pipeline in one go
     features = get_features(distances, df_x=df_benchmark, df_y=df_input, candidate_links=candidate_links)
@@ -235,7 +237,8 @@ def get_matches_with_clusters(
     l_all_matches = [matches_auto, matches_supervised]
 
     if all([df.empty for df in l_all_matches]):
-        print("⚠️ No matches found")
+        if verbose and logger is not None:
+            logger.warning("⚠️ No matches found")
         all_matches = pd.DataFrame()
     else:
         all_matches = (
@@ -245,8 +248,8 @@ def get_matches_with_clusters(
         )
         all_matches = all_matches[all_matches['rank'] <= n_matches]
 
-        if verbose:
-            print(
+        if verbose and logger is not None:
+            logger.info(
 f"""""
 Total benchmark IDs: {df_benchmark.shape[0]}
 Matched benchmark IDs: {all_matches[['ID_1']].drop_duplicates().shape[0]}

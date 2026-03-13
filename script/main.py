@@ -3,6 +3,7 @@ from svoc.settings import get_settings, Settings
 from svoc.utils import read_data_from_csv, get_logger
 from svoc.orchestrator import svoc_knn, svoc_record_linkage
 
+CONFIG_PATH = "./config/dev3.yaml"
 logger = get_logger()
 
 def svoc_pipeline(
@@ -27,7 +28,8 @@ def svoc_pipeline(
         df_input=df_input, 
         df_benchmark=df_benchmark, 
         k=settings.K_NEIGHBOURS,
-        save=False
+        save=False,
+        logger=logger
     )
 
     logger.info("Postcode neighbourhoods computed (%d groups)", len(neighbors))
@@ -38,7 +40,8 @@ def svoc_pipeline(
         df_input=df_input, 
         df_benchmark=df_benchmark,
         groups=neighbors,
-        save=True
+        save=True,
+        logger=logger
     )
 
     logger.info("Record linkage completed (%d matched rows)", len(output))
@@ -48,7 +51,7 @@ def svoc_pipeline(
 
 def main():
     logger.info("Starting SVOC pipeline")
-    settings = get_settings()
+    settings = get_settings(CONFIG_PATH)
     logger.info("Settings loaded")
     output = svoc_pipeline(settings=settings)
     logger.info("SVOC pipeline finished successfully")
