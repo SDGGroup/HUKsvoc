@@ -6,6 +6,7 @@ from sklearn.neighbors import NearestNeighbors
 
 
 settings = get_settings()
+# settings = get_settings("./config/dev2.yaml")
 
 df_input, df_benchmark = read_data_from_csv(settings)
 
@@ -16,7 +17,7 @@ df_input, df_benchmark = read_data_from_csv(settings)
 
 pc_bench=rename_and_select_cols(
     df=df_benchmark, 
-    dict_cols={'POSTCODE':'OutletPostcode', 'LAT':'Latitude', 'LONG':'Longitude'}
+    dict_cols={'POSTCODE':'outletpostcode', 'LAT':'latitude', 'LONG':'longitude'}
     ).drop_duplicates()
 pc_bench=make_upper_str(df=pc_bench)
 pc_bench=remove_accents_and_regex(

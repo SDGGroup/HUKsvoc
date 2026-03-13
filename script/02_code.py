@@ -6,18 +6,18 @@ from svoc.settings import get_settings
 from svoc.utils import read_data_from_csv
 from svoc.datapreparation import prepare_data, make_upper_str, rename_and_select_cols
 from svoc.automatic.match import get_automatic_matches
+from svoc.rl import get_matches_with_clusters
 from svoc.supervised.match import predict_supervised
 from svoc.rl import get_matches_with_blocking, prepare_output
 import pandas as pd
 import numpy as np
 from svoc.constants import DISTANCES, FILTERS_AUTO
 
-
-
-settings = get_settings()
-# settings = get_settings("./config/dev2.yaml")
+# settings = get_settings()
+settings = get_settings("./config/dev3.yaml")
 
 df_input, df_benchmark = read_data_from_csv(settings)
+
 
 # ## Modifico Location SAP (TEST)
 # df_loc = pd.read_csv('./data/HUK_sap_location.csv', sep=',', dtype=str)
@@ -88,6 +88,7 @@ df_benchmark_clean = prepare_data(
 df_input_clean = prepare_data(
     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT)
 
+
 df_inner = (df_input_clean
             .merge(
                 make_upper_str(df_input[[settings.INPUT_COLUMNS.ID, "sapcode"]]).replace(['NAN', 'NONE'], np.nan), 
@@ -108,11 +109,17 @@ df_inner = (df_input_clean
 #     df=df_input, dict_cols=settings.INPUT_COLUMNS_DICT,
 #     parse_address=False, get_town=False, rm_address_noise=True)
 
-from svoc.rl import get_matches_with_clusters
-
 with open("./data/postcode.json", "r") as f:
     groups = json.load(f)
 
+from svoc.orchestrator import svoc_knn
+groups = svoc_knn(
+    settings=settings, 
+    df_input=df_input, 
+    df_benchmark=df_benchmark, 
+    k=settings.K_NEIGHBOURS,
+    save=False
+)
 
 all_matches, features, remaining_features = get_matches_with_clusters(
     df_input=df_input_clean, 

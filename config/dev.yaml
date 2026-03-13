@@ -1,21 +1,40 @@
-DATA_DIR: "./data"
+DATA_DIR: "C:\\data\\HUKsvoc\\data"
 
 
-BENCHMARK_DATA_FILENAME: "HUK_sap_data.csv"
+# BENCHMARK_DATA_FILENAME: "HUK_sap_data.csv"
+# BENCHMARK_COLUMNS:
+#   ID: 'SapCode'
+#   OUTLET_NAME: 'OutletName'
+#   POSTCODE: 'OutletPostcode'
+#   ADDRESS: 'OutletAddress'
+
+# INPUT_DATA_FILENAME: "HUK_bowimi_data.csv"
+# INPUT_COLUMNS:
+#   ID: 'BowimiId'
+#   OUTLET_NAME: 'OutletName'
+#   POSTCODE: 'OutletPostCode'
+#   ADDRESS: 'OutletAddress'
+
+BENCHMARK_DATA_FILENAME: "SAP.csv"
 BENCHMARK_COLUMNS:
-  ID: 'SapCode'
-  OUTLET_NAME: 'OutletName'
-  POSTCODE: 'OutletPostcode'
-  ADDRESS: 'OutletAddress'
+  ID: 'sapcode'
+  OUTLET_NAME: 'outletname'
+  POSTCODE: 'outletpostcode'
+  ADDRESS: 'outletaddress'
+  LATITUDE: 'latitude'
+  LONGITUDE: 'longitude'
 
-INPUT_DATA_FILENAME: "HUK_bowimi_data.csv"
+INPUT_DATA_FILENAME: "BOW.csv"
 INPUT_COLUMNS:
-  ID: 'BowimiId'
-  OUTLET_NAME: 'OutletName'
-  POSTCODE: 'OutletPostCode'
-  ADDRESS: 'OutletAddress'
+  ID: 'bowimicode'
+  OUTLET_NAME: 'outletname'
+  POSTCODE: 'outletpostcode'
+  ADDRESS: 'outletaddress'
+  LATITUDE: 'latitude'
+  LONGITUDE: 'longitude'
 
-# MODELS_DIR: "./models"
+
+MODELS_DIR: "C:\\data\\HUKsvoc\\models"
 # N_MATCHES: 3
 # BLOCK_COL: POSTCODE
 

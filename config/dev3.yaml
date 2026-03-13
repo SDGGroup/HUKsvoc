@@ -23,9 +23,9 @@ BENCHMARK_COLUMNS:
   LATITUDE: 'latitude'
   LONGITUDE: 'longitude'
 
-INPUT_DATA_FILENAME: "BOW.csv"
+INPUT_DATA_FILENAME: "STGT.csv"
 INPUT_COLUMNS:
-  ID: 'bowimicode'
+  ID: 'ontoftcode'
   OUTLET_NAME: 'outletname'
   POSTCODE: 'outletpostcode'
   ADDRESS: 'outletaddress'
