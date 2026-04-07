@@ -263,7 +263,8 @@ Un-matched benchmark IDs: {df_benchmark[~df_benchmark.index.isin(all_matches['ID
 def prepare_output( 
         matches: pd.DataFrame,
         distances: list[Distance],
-        filters: list[DistanceMethod]
+        filters: list[DistanceMethod],
+        max_input_matches: int | None = None
     ) -> pd.DataFrame:
     """Format matching results into standardized output structure.
     
@@ -331,6 +332,12 @@ def prepare_output(
             f"filters must be a list, got {type(filters).__name__}"
         )
     
+    if max_input_matches is not None:
+        matches = (matches
+                   .sort_values(by=['ID_2', 'score'], ascending=[True, False])
+                   .groupby('ID_2')
+                   .head(max_input_matches))
+
     required_cols = ['ID_1', 'ID_2', 'ID_filter', 'rank', 'score', 'match_type']
     missing_cols = [col for col in required_cols if col not in matches.columns]
     if missing_cols:

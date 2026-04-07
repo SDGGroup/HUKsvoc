@@ -14,6 +14,7 @@ import numpy as np
 from recordlinkage import Compare, Index
 from svoc.automatic.enums import DistanceMethod
 from svoc.automatic.models import Distance
+from svoc.constants import DISTANCES
 import logging
 
 
@@ -91,8 +92,8 @@ def rl_compare_block(
     - candidate_links: If provided, uses these pre-computed pairs instead of generation.
     
     Args:
-        df_1: First DataFrame (typically benchmark data)
-        df_2: Second DataFrame (typically input data)
+        df_1: First DataFrame (typically benchmark data). Must have unique index values.
+        df_2: Second DataFrame (typically input data). Must have unique index values.
         compare_cl: Configured Compare object with distance methods
         block_variable: Column name to use for blocking. None = full index. Default: None
         window: Window size for sorted neighbourhood blocking. Default: 1
@@ -110,6 +111,11 @@ def rl_compare_block(
     Warning:
         Using block_variable=None generates all possible pairs, which can be extremely
         large for big datasets (O(n*m) complexity).
+        
+    Note:
+        The function automatically removes duplicate indices from input DataFrames to
+        prevent recordlinkage errors. Only the first occurrence of each duplicate index
+        is kept.
     """
     if not isinstance(df_1, pd.DataFrame):
         raise TypeError(
@@ -133,6 +139,11 @@ def rl_compare_block(
                 f"block_variable '{block_variable}' not found in df_2. Available columns: {list(df_2.columns)}"
             )
 
+    # Ensure indices are unique - recordlinkage requires this
+    # Drop duplicate indices to prevent length mismatch errors
+    df_1_clean = df_1[~df_1.index.duplicated(keep='first')]
+    df_2_clean = df_2[~df_2.index.duplicated(keep='first')]
+    
     if candidate_links is None:
         indexer = Index()
         if block_variable is not None:
@@ -144,9 +155,9 @@ def rl_compare_block(
             rl_logger = logging.getLogger("recordlinkage")
             rl_logger.setLevel(logging.ERROR)
             indexer.full()
-        candidate_links = indexer.index(df_1, df_2) 
+        candidate_links = indexer.index(df_1_clean, df_2_clean) 
     
-    features = compare_cl.compute(candidate_links, df_1, df_2)
+    features = compare_cl.compute(candidate_links, df_1_clean, df_2_clean)
     features = features.fillna(0.0)
     return features
 
@@ -343,8 +354,10 @@ def get_features(
     
     Args:
         distances: List of Distance objects defining all features to compute
-        df_x: First DataFrame (typically benchmark data), must have 'ID' column
-        df_y: Second DataFrame (typically input data), must have 'ID' column
+        df_x: First DataFrame (typically benchmark data), must have 'ID' column.
+              Duplicate indices will be automatically removed (first occurrence kept).
+        df_y: Second DataFrame (typically input data), must have 'ID' column.
+              Duplicate indices will be automatically removed (first occurrence kept).
         block_col: Column name for blocking. None = full index (all pairs). Default: None
         window: Window size for sorted neighbourhood blocking. Default: 1
         njobs: Number of parallel jobs (-1 = all CPUs). Default: -1
@@ -382,7 +395,25 @@ def get_features(
             f"df_y must be a pandas DataFrame, got {type(df_y).__name__}"
         )
     
+    # Clean DataFrames: remove duplicate indices to prevent recordlinkage errors
+    df_x_clean = df_x[~df_x.index.duplicated(keep='first')]
+    df_y_clean = df_y[~df_y.index.duplicated(keep='first')]
+    
     compare_cl = initialize_compare_cl(distances, n_jobs_param=njobs)
-    features = rl_compare_block(df_x, df_y, compare_cl, block_col, window, candidate_links=candidate_links)
-    features = manual_features(distances, features, df_x, df_y, index_x="ID_1", index_y="ID_2")
+    features = rl_compare_block(df_x_clean, df_y_clean, compare_cl, block_col, window, candidate_links=candidate_links)
+    features = manual_features(distances, features, df_x_clean, df_y_clean, index_x="ID_1", index_y="ID_2")
+
+
+    dist_list = [d.label for d in DISTANCES if d.method not in  [DistanceMethod.EXACT, DistanceMethod.SUBSTRING, DistanceMethod.WORDSMATCH] and d.col_name_x == d.col_name_y]
+    dist_list_exact = [d.label for d in DISTANCES if d.method == DistanceMethod.EXACT]
+
+    features['score'] = np.where(features[dist_list_exact] == 1, 1, 0).sum(axis=1) == len(dist_list_exact)
+    features["score"] = features["score"].astype("float64")
+    mask = features["score"] < 1
+    features.loc[mask, "score"] = (
+        features.loc[mask, dist_list]
+        .mean(axis=1)
+        .astype("float64")
+    )
+
     return features

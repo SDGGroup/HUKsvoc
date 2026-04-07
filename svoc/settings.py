@@ -60,7 +60,8 @@ class Settings(BaseSettings):
         INPUT_COLUMNS: Column mapping for input data. Default: DataColumns()
         BENCHMARK_COLUMNS: Column mapping for benchmark data. Default: DataColumns()
         MODELS_DIR: Directory for saving/loading models. Default: "./models"
-        N_MATCHES: Number of top matches to return per record. Default: 3
+        N_BENCHMARK_MATCHES: Number of top matches to return per record. Default: 3
+        N_INPUT_MATCHES: Number of top matches to return per record for input data. Default: None
         K_NEIGHBOURS: Number of neighbors for kNN blocking. Default: 6
         BLOCK_COL: Column to use for blocking (None for no blocking). Default: "POSTCODE"
     """
@@ -158,7 +159,8 @@ class Settings(BaseSettings):
             for model, filename in SUPERVISED_MODELS_FILENAME.items()
         }
 
-    N_MATCHES: int = Field(3, ge=1)
+    N_BENCHMARK_MATCHES: int = Field(3, ge=1)
+    N_INPUT_MATCHES: Optional[int] = Field(20, ge=1)
     K_NEIGHBOURS: Optional[int] = Field(6, ge=1)
     BLOCK_COL: Optional[str] = "POSTCODE"
 

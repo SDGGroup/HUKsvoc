@@ -262,7 +262,7 @@ def svoc_record_linkage(
         filters=FILTERS_AUTO,
         block_col=settings.BLOCK_COL,
         groups=groups,
-        n_matches=settings.N_MATCHES, verbose=False,
+        n_matches=settings.N_BENCHMARK_MATCHES, verbose=False,
         models_path_dict=settings.SUPERVISED_MODELS_PATHS,
         logger=logger
         )

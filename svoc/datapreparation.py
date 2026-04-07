@@ -404,6 +404,62 @@ def check_duplicates(df: pd.DataFrame, logger: Logger | None = None) -> pd.DataF
     return df.drop_duplicates()
 
 
+def check_id(df: pd.DataFrame, logger: Logger | None = None) -> pd.DataFrame:
+    """
+    Checks for duplicate IDs in the DataFrame.
+    
+    Verifies that the 'ID' column contains only unique values. If duplicate IDs
+    are found, raises a ValueError with details about the duplicates.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to check for duplicate IDs. Must contain an 'ID' column.
+    logger : Logger | None, default None
+        Optional logger for error messages. If None, only raises error.
+        
+    Returns
+    -------
+    pd.DataFrame
+        The input DataFrame if no duplicates are found.
+        
+    Raises
+    ------
+    ValueError
+        If duplicate IDs are found in the 'ID' column.
+    ValueError
+        If 'ID' column is not present in the DataFrame.
+        
+    Notes
+    -----
+    The ID column must have unique values for each row to ensure data integrity.
+        
+    Examples
+    --------
+    >>> df_checked = check_id(df)
+    >>> df_checked = check_id(df, logger=my_logger)
+    """
+    if 'ID' not in df.columns:
+        raise ValueError("DataFrame must contain an 'ID' column")
+    
+    duplicate_ids = df[df['ID'].duplicated(keep=False)]
+    
+    if not duplicate_ids.empty:
+        duplicate_id_values = duplicate_ids['ID'].unique()
+        error_msg = (
+            f"Duplicate IDs found in the data: {len(duplicate_ids)} rows with "
+            f"{len(duplicate_id_values)} duplicate ID values. "
+            f"The ID column must have unique values for each row."
+        )
+        
+        if logger:
+            logger.error(error_msg)
+        
+        raise ValueError(error_msg)
+    
+    return df
+
+
 def prepare_data(
         df: pd.DataFrame, 
         dict_cols: dict[str, str], 
@@ -448,8 +504,7 @@ def prepare_data(
     if not isinstance(get_town, bool):
         raise TypeError(f"get_town must be a boolean, got {type(get_town).__name__}")
     
-    out=check_duplicates(df=df, logger=logger)
-    out=rename_and_select_cols(df=out, dict_cols=dict_cols)
+    out=rename_and_select_cols(df=df, dict_cols=dict_cols)
     out=make_upper_str(df=out)
 
     out = out[~out['OUTLET_NAME'].str.contains("DO NOT USE", case=False, na=False)]
@@ -469,8 +524,11 @@ def prepare_data(
     out=remove_accents_and_regex(df=out, re_pattern=r'[^a-zA-Z0-9]', l_id_cols=['ID'], 
                                  l_cols_not_to_apply=['OUTLET_NAME','OUTLET_NAME_CLEAN', 'ADDRESS','ADDRESS_CLEAN'])
     out = out.replace('', np.nan)
-    out = out.set_index('ID')
-    return out
+
+    out = check_duplicates(df=out, logger=logger)
+    out = check_id(df=out, logger=logger)
+
+    return out.set_index('ID')
 
 def split_df(
         df: pd.DataFrame, 

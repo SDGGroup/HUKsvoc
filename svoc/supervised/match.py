@@ -105,7 +105,7 @@ def predict_supervised(
     Returns:
         DataFrame with columns:
         - ID_1, ID_2: Index of matched record pairs
-        - score: Match probability/confidence score
+        - _prob: Match probability/confidence score
         - match_type: Always "supervised"
         - model: Name of the model used
         
@@ -133,14 +133,14 @@ def predict_supervised(
 
     if mdl.__class__.__name__ == "SVMClassifier": 
         matches = pd.DataFrame(index = mdl.predict(features))
-        matches["score"] = threshold
+        matches["_prob"] = threshold
     else:
-        matches = pd.DataFrame(mdl.prob(features), columns=['score'])
+        matches = pd.DataFrame(mdl.prob(features), columns=['_prob'])
 
     matches["match_type"] = "supervised"
     matches["model"] = model.value
 
-    return matches[matches["score"] >= threshold]
+    return matches[matches["_prob"] >= threshold]
 
 
 def find_supervised_matches(
@@ -186,7 +186,10 @@ def find_supervised_matches(
     for mdl in SupervisedModel:
         if remaining_features.empty:
             break   
-        matches_supervised = predict_supervised(remaining_features, model=mdl, pickle_path=models_path_dict[mdl])
+        matches_supervised = predict_supervised(
+            remaining_features.drop(columns=["score"]), 
+            model=mdl, pickle_path=models_path_dict[mdl])
+        
         remaining_features = remaining_features.loc[~remaining_features.index.isin(matches_supervised.index)]
         all_matches_supervised_l.append(matches_supervised.reset_index())
 

@@ -196,8 +196,8 @@ def find_automatic_matches(
                 print(f"Filter {i}: Any match found")
             continue
         else:
-            matches_filter_i['ID_filter'] = i + 1
-            matches_filter_i['score'] = norm_score(matches_filter_i, f.value.keys())
+            matches_filter_i['ID_filter'] = i + 1 
+            # matches_filter_i['score'] = norm_score(matches_filter_i, f.value.keys())
             matches_filter_i = (
                 matches_filter_i
                 .merge(

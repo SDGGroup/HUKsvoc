@@ -128,7 +128,7 @@ all_matches, features, remaining_features = get_matches_with_clusters(
     filters=FILTERS_AUTO,
     block_col=settings.BLOCK_COL,
     groups=groups,
-    n_matches=settings.N_MATCHES,
+    n_matches=settings.N_BENCHMARK_MATCHES,
     models_path_dict=settings.SUPERVISED_MODELS_PATHS,
     verbose=False
     )
@@ -183,7 +183,7 @@ all_matches_old, features, remaining_features = get_matches_with_blocking(
     filters=FILTERS_AUTO,
     # n_groups = 1, window = 3,         # Sorted Neighbourhood
     n_groups = 15, window = 1,          # Blocking
-    n_matches=settings.N_MATCHES, verbose=False,
+    n_matches=settings.N_BENCHMARK_MATCHES, verbose=False,
     models_path_dict= settings.SUPERVISED_MODELS_PATHS
         # {
         #     SupervisedModel.LOGREG: Path("./models/old") / SUPERVISED_MODELS_FILENAME[SupervisedModel.LOGREG],
@@ -219,7 +219,7 @@ all_matches_auto, features, remaining_features = get_automatic_matches(
     block_col=settings.BLOCK_COL, 
     distances=DISTANCES, 
     filters=FILTERS_AUTO,
-    n_groups=15, n_matches=settings.N_MATCHES, verbose=False)
+    n_groups=15, n_matches=settings.N_BENCHMARK_MATCHES, verbose=False)
 
 all_matches_auto = (
     all_matches_auto
